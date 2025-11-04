@@ -21,13 +21,13 @@ const sortField = ref('')
 const emits = defineEmits(['toggleAllSelection', 'editColumn', 'updateValue', 'sortData'])
 
 function toggleRowSelection() {
-  rowSelected.value.includes(props.scope?.path) ? rowSelected.value.splice(rowSelected.value.indexOf(props.scope?.path), 1) : rowSelected.value.push(props.scope?.path)
+  rowSelected.value.includes(props.scope?.id) ? rowSelected.value.splice(rowSelected.value.indexOf(props.scope?.id), 1) : rowSelected.value.push(props.scope?.id)
 }
 function toggleAllRowsSelection() {
   emits('toggleAllSelection')
 }
 function handleUpdateValue(value: string) {
-  emits('updateValue', {path: props.scope?.path, field: props.prop, value})
+  emits('updateValue', {key: props.scope?.id, field: props.prop, value})
 }
 function changeSort(field: string) {
   sortAscend.value = sortField.value === field ? !sortAscend.value : true
@@ -39,7 +39,9 @@ function changeSort(field: string) {
 <template>
   <template v-if="scope"> <!-- Body -->
     <template v-if="rowSelectable">
-      <input type="checkbox" :checked="rowSelected.includes(scope.path)" @change="toggleRowSelection()">
+      <div class=" text-center">
+        <input type="checkbox" :checked="rowSelected.includes(scope.id)" @change="toggleRowSelection()">
+      </div>
     </template>
     <template v-else>
       <template v-if="prop">

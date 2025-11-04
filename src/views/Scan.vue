@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, inject } from 'vue'
-import type { ScanState } from '@/composables/key'
+import { type ScanState, scanState } from '@/composables/key'
 import { getFolderStatus, scanFolders, getScanStatus } from '@/apis/methods/manage'
 
 const flag = ref(0)
@@ -8,7 +8,7 @@ const startScan = 'Start scanning...'
 const scanInfo = ref('')
 const scannedNum = ref(0)
 const folders = ref<ScanFolder[]>()
-const {scanned, updateScanned} = inject<ScanState>('scanState') as ScanState
+const {scanned, updateScanned} = inject<ScanState>(scanState) as ScanState
 const flashMsg = ref('')
 const displayFlash = computed(() => {
   if(flashMsg.value != ''){

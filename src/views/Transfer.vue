@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRequest } from 'alova/client';
+import { invalidateCache } from 'alova';
 import WTable from '@/components/WTable.vue'
 import WColumn from '@/components/WColumn.vue';
 import { getFiles, switchVersionType, transferFiles, cleanMetaTag, updateMetaTags, updateFieldTag } from "@/apis/methods/manage.ts";
 
-const fileList = ref<TrackFile[]>([]);
 const rowSelected = ref<string[]>([])
-const allSelected = computed(() => rowSelected.value.length === fileList.value.length)
+const allSelected = computed(() => rowSelected.value?.length === fileList.value?.length)
 const metaDlg = ref<HTMLDialogElement>()
 const fieldDlg = ref<HTMLDialogElement>()
 const title = ref('')
@@ -22,17 +23,19 @@ const origin_year = ref('')
 const origin_genre = ref('')
 const encodingChange = ref(false)
 const hasLatin1 = computed(()=>{
-  let items = fileList.value.filter(item => rowSelected.value.includes(item.path))
-  let encoding = items.map(item => item.encoding)
-  return encoding.includes('LATIN1')
+  let items = fileList.value?.filter(item => rowSelected.value.includes(item.path))
+  let encoding = items?.map(item => item.encoding)
+  return encoding?.includes('LATIN1')
 })
 const delApev2 = ref(false)
 const hasApev2 = computed(()=>{
-  let items = fileList.value.filter(item => rowSelected.value.includes(item.path))
-  let version = items.map(item => item.version)
-  for(let v of version){
-    if(v.includes('APEv2')){
-      return true
+  let items = fileList.value?.filter(item => rowSelected.value.includes(item.path))
+  let version = items?.map(item => item.version)
+  if (version) {
+    for(let v of version){
+      if(v.includes('APEv2')){
+        return true
+      }
     }
   }
   return false
@@ -55,13 +58,9 @@ function get_set<K extends keyof TrackFile>(items: TrackFile[], field: K): Track
     return '*多值*' as never as TrackFile[K]
   }
 }
+const { data: fileList, send: getFileList} = useRequest(getFiles, { immediate: false })
 function handleGetFiles() {
-  getFiles().then((res) =>{
-    fileList.value = res.data
-    fileList.value.forEach(item => {
-      item.ver_activate = 0
-    })
-  })
+  getFileList()
 }
 function handleAllSelection() {
   if(allSelected.value){
@@ -117,11 +116,12 @@ function updateMeta() {
     change.genre = genre.value
   }
   console.log({items: rowSelected.value, change: change})
-  updateMetaTags(rowSelected.value, change).then((data) => {
-    if (data == 'ok') {
+  updateMetaTags(rowSelected.value, change).then((res) => {
+    if (res.data == 'ok') {
       if (metaDlg.value !== undefined) {
         metaDlg.value.close()
-        handleGetFiles
+        invalidateCache(getFiles())
+        getFileList()
       }
     }
   })
@@ -137,8 +137,8 @@ function handleEditColumn(field: EditableTrackMetaField) {
 function updateColumn(){
   let items = rowSelected.value.length === 0 ? fileList.value.map(item => item.path) : rowSelected.value
   console.log({field: edit_column.value, value: column_value.value, items: items})
-  updateFieldTag(items, edit_column.value!, column_value.value).then((data) => {
-    if (data == 'ok'){
+  updateFieldTag(items, edit_column.value!, column_value.value).then((res) => {
+    if (res.data == 'ok'){
       for(let i = 0; i < fileList.value.length; i++){
         if(items.includes(fileList.value[i].path)){
           fileList.value[i][edit_column.value!] = column_value.value
@@ -148,12 +148,12 @@ function updateColumn(){
     }
   })
 }
-function updateCellValue(payload: {path: string, field: EditableTrackMetaField, value: string}){
+function updateCellValue(payload: {key: string, field: EditableTrackMetaField, value: string}){
   // send to backend ★★★★★★★★★★★★★★★★★★★
-  console.log('change in ' + payload.field + ' of ' + payload.path + ':' + payload.value)
-  updateFieldTag([payload.path], payload.field, payload.value ).then((data) => {
-    if (data == 'ok'){
-      fileList.value.filter(item => item.path === payload.path)[0][payload.field] = payload.value
+  console.log('change in ' + payload.field + ' of ' + payload.key + ':' + payload.value)
+  updateFieldTag([payload.key], payload.field, payload.value ).then((res) => {
+    if (res.data == 'ok'){
+      fileList.value.filter(item => item.path === payload.key)[0][payload.field] = payload.value
       alert('修改成功')
     }
   })
@@ -173,7 +173,8 @@ function doTransfer(){
       transferDlg.value?.close()
       alert('Transfer Success!')
       rowSelected.value = []
-      handleGetFiles()
+      invalidateCache(getFiles())
+      getFileList()
     }else{
       alert('Transfer Failed!')
     }
@@ -194,6 +195,7 @@ async function handleClean(){
           progress.value = Math.min((i + 1) * 10 / clean_count * 100, 100)
         }
       }
+      invalidateCache(getFiles())
     }
   }
 }
@@ -210,11 +212,9 @@ function handleSwitchVersionType(path:string, index: number){
     let ver_type = row.version[index]
     if (ver_type !== undefined) {
       switchVersionType(path, ver_type).then((res) => {
-        if(res.code === 200){
           let item = res.data
           item.ver_activate = index
           fileList.value[fileList.value.indexOf(row)] = item
-        }
       })
     }
   }
@@ -252,7 +252,7 @@ function handleSwitchVersionType(path:string, index: number){
         </template>
       </w-column>
       <w-column label="Title" prop="title" :cell-editable="true" @update-value="updateCellValue" />
-      <w-column width="18%" label="Artist" prop="artist" 
+      <w-column width="18%" label="Artists" prop="artist" 
         :column-editable="true" 
         :cell-editable="true"
         :sortable="true"
@@ -260,9 +260,24 @@ function handleSwitchVersionType(path:string, index: number){
         @update-value="updateCellValue"
         @sort-data="handleSortData" 
       />
-      <w-column width="18%" label="Album" prop="album" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
-      <w-column width="5%" label="Year" prop="year" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
-      <w-column width="10%" label="Genre" prop="genre" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
+      <w-column width="18%" label="Album" prop="album" 
+        :column-editable="true" 
+        :cell-editable="true" 
+        @edit-column="handleEditColumn" 
+        @update-value="updateCellValue" 
+      />
+      <w-column width="5%" label="Year" prop="year" 
+        :column-editable="true" 
+        :cell-editable="true" 
+        @edit-column="handleEditColumn" 
+        @update-value="updateCellValue" 
+      />
+      <w-column width="10%" label="Genre" prop="genre" 
+        :column-editable="true" 
+        :cell-editable="true" 
+        @edit-column="handleEditColumn" 
+        @update-value="updateCellValue" 
+      />
       <w-column width="5%" label="Has_Art" prop="has_art" />
     </w-table>
   </div>

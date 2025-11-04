@@ -6,10 +6,10 @@ import WUpload from '@/components/WUpload.vue';
 import { uploadFile } from '@/apis/methods/manage';
 
 const uploadQueue = ref<AlovaFileItem[]>();
-let fileItemInit = {
-  status: 0 as 0|1|2|3,
-  progress: {uploaded: 0, total: 0}
-}
+// let fileItemInit = {
+//   status: 0 as 0|1|2|3,
+//   progress: {uploaded: 0, total: 0}
+// }
 const uploadingCount = ref(0);
 const needUpload = ref<AlovaFileItem[]>()
 const { fileList, appendFiles, removeFiles, onSuccess, upload } = useUploader(({file, name}) => uploadFile(file, name), {limit: 3});
@@ -26,7 +26,7 @@ function checkUpload() {
   }
 }
 function handleUpload(files: File[]) {
-  let fileItems = files.map(file => ({file, ...fileItemInit}))
+  let fileItems = files.map(file => ({file, status:0 as 0|1|2|3, progress: {uploaded: 0, total: 0}}))
   if (uploadQueue.value) {
     uploadQueue.value.push(...fileItems)
   } else {
@@ -60,8 +60,8 @@ onSuccess((event) => {
             <div class=" flex-1 pl-4">{{ f.file.name }}</div>
             <div class=" flex-none w-40">
               <span v-if="f.status === 1" class=" block h-6 bg-cyan-600 text-gray-300 text-center" 
-                :style="{width: f.progress.uploaded / f.progress.total * 100 + '%'}">
-                {{ f.progress.uploaded / f.progress.total * 100 + '%' }}
+                :style="{width: f.progress.total == 0 ? 0 : f.progress.uploaded / f.progress.total * 100 + '%'}">
+                {{ f.progress.total == 0 ? '' : (f.progress.uploaded / f.progress.total * 100).toFixed(2) + '%' }}
               </span>
               <span v-else-if="f.status === 2" class=" w-full block h-6 bg-cyan-600 text-gray-300 text-center">100%</span>
               <span v-else-if="f.status === 3">{{ f.error?.message }}</span>

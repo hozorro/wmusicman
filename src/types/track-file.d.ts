@@ -3,6 +3,12 @@ declare interface ResponseData<T> {
   msg: string,
   data: T
 }
+declare interface ServerStatus {
+  scanner: string
+  watcher: string,
+  move_mode: boolean,
+  cut_files: int
+}
 declare interface ServerInfo {
   version: string,
   music_buffer: string,
@@ -15,16 +21,19 @@ declare interface ServerInfo {
     playlists: number,
     genres: number
   },
-  status: {
-    watcher: string,
-    scanner: string
-  }
+  status: ServerStatus
+}
+declare type MetaType = 'folder' | 'track' | 'artist' | 'album' | 'genre' | 'playlist' | 'play_data_version' | 'schema_version';
+
+declare type IMetaInfo = {
+  [K in MetaType]: K extends 'play_data_version' | 'schema_version' ? number : {last_scan: number, count: number};
 }
 declare interface TrackFile {
+  id: string,
   path: string,
   version: string[],
   encoding: 'LATIN1' | 'UTF-8' | 'UTF-16' | 'UTF-16BE' | 'UTF-16LE' | null,
-  ver_activate?: number,
+  ver_activate: number,
   title: string,
   artist: string,
   album: string,
@@ -71,4 +80,15 @@ declare interface Track {
   album: string,
   genre: string,
   year: string,
+  path?: string
+}
+declare interface OutPlaylist {
+  name: string,
+  tracks: {
+    name: string,
+    artist: string,
+    artists: string[],
+    album: string,
+    duration: string
+  }[]
 }

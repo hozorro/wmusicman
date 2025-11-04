@@ -14,7 +14,7 @@ function handleLogs() {
     <div class=" my-2 flex-1">
       <button type="button" class=" mr-2 p-2 w-28" @click="handleLogs">获取日志</button>
     </div>
-    <div class=" mt-2 w-full h-full overflow-y-auto">
+    <div class=" mt-2 w-full h-full overflow-y-auto text-sm">
       <ul>
         <li v-for="(l,i) in logs" :key="i">{{ l }}</li>
       </ul>

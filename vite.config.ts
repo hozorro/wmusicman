@@ -20,10 +20,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5175,
     proxy: {
-      '/apim': {
+      '/api': {
         target: env.VITE_BASE_URL,
         changeOrigin: true,
-        //rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

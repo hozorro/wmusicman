@@ -2,24 +2,26 @@
 import { ref, computed, useTemplateRef } from "vue";
 import { useRequest } from "alova/client";
 import { invalidateCache } from "alova";
+import { getFileNameWithoutExt } from "@/utils/general";
 import WTable from '@/components/WTable.vue'
 import WColumn from '@/components/WColumn.vue';
-import { getArtistChars, getArtists, getArtist, getAlbum, uploadArtistArt, uploadAlbumArt, updateTrackFieldTag } from "@/apis/methods/manage";
+import { getArtistChars, getArtists, getArtist, getAlbum, uploadArtistArt, uploadAlbumArt, updateTrackFieldTag, correctName, setArtistPath } from "@/apis/methods/manage";
 import DefaultFace from "@/assets/imgs/artist.png";
 import DefaultPortrait from "@/assets/imgs/portrait.png";
 import DefaultTrack from "@/assets/imgs/track.png";
 import DefaultAlbumArt from "@/assets/imgs/album.png";
 
 const artistChar = ref("");
+const showNoPathArtists = ref(false);
 const {data: artistChars, onSuccess} = useRequest(getArtistChars);
 onSuccess(() => {
   let firstHasArtistChar = artistChars.value.find((charInfo) => charInfo.hasArtist)
   if (firstHasArtistChar) {
     artistChar.value = firstHasArtistChar.charName;
-    getArtistList(artistChar.value);
+    getArtistList(artistChar.value, showNoPathArtists.value);
   }
 });
-const {data: artists, send: getArtistList} = useRequest((achar: string) => getArtists(achar),{
+const {data: artists, send: getArtistList} = useRequest((achar: string, withNoPah: boolean) => getArtists(achar, withNoPah),{
   initialData: [],
   immediate: false
 });
@@ -40,20 +42,42 @@ function switchArtists(char: string){
   album.value.tracks = [];
   albumArtSrc.value = '';
   artistChar.value = char;
-  getArtistList(artistChar.value);
+  rowSelected.value = []
+  getArtistList(artistChar.value, showNoPathArtists.value);
+}
+function filterArtists() {
+  getArtistList(artistChar.value, showNoPathArtists.value);
 }
 function handleArtist(id: string){
   album.value.tracks = [];
   album.value.name = '[专辑]'
   album.value.cover = '';
+  rowSelected.value = []
   getArtistInfo(id).then((res) => { 
     faceSrc.value = res.face;
     portraitSrc.value = res.portrait;
   });
 }
 function handleAlbum(id: string){
+  rowSelected.value = []
   getAlbumInfo(id).then((res) => {
     albumArtSrc.value = res.cover;
+  })
+}
+function handleSetArtistPath() {
+  setArtistPath(artist.value.id).then(() => { 
+    invalidateCache(getArtist(artist.value.id))
+    alert('修改路径成功')
+  }).catch(() => {
+    alert('修改路径失败')
+  })
+}
+function handleNewArtistFolder(lang: 'cn' | 'fr') {
+  setArtistPath(artist.value.id, lang).then(() => { 
+    invalidateCache(getArtist(artist.value.id))
+    alert('修改路径成功')
+  }).catch(() => {
+    alert('修改路径失败')
   })
 }
 
@@ -181,6 +205,7 @@ const allSelected = computed(() => {
   return false
 })
 const edit_column = ref<EditableTrackMetaField>()
+const artist_area = ref<'CN'|'FR'>('CN')
 const column_value = ref('')
 const origin_column_value = ref('')
 const fieldDlg = useTemplateRef('fieldDlg')
@@ -202,8 +227,8 @@ function handleAllSelection() {
 }
 function updateCellValue(payload: {id: string, field: EditableTrackMetaField, value: string}) {
   console.log('change in ' + payload.field + ' of ' + payload.id + ':' + payload.value)
-  updateTrackFieldTag([payload.id], payload.field, payload.value ).then((data) => {
-    if (data == 'ok'){
+  updateTrackFieldTag([payload.id], payload.field, payload.value ).then((res) => {
+    if (res.data == 'ok'){
       album.value.tracks.filter(item => item.id === payload.id)[0][payload.field] = payload.value
       alert('修改成功')
     }
@@ -221,23 +246,40 @@ function updateColumn() {
   if (edit_column.value !== undefined){
     let field = edit_column.value
     console.log({field: edit_column.value, value: column_value.value, items: items})
-    updateTrackFieldTag(items, edit_column.value!, column_value.value).then((data) => {
-      if (data == 'ok'){
+    updateTrackFieldTag(items, edit_column.value, column_value.value, artist_area.value).then((res) => {
+      if (res.data == 'ok'){
         for(let i = 0; i < album.value.tracks.length; i++){
           if(items.includes(album.value.tracks[i].id)){
             album.value.tracks[i][field] = column_value.value
           }
         }
+        invalidateCache([getAlbum(album.value.id),getArtists(artistChar.value)])
+        alert('修改成功，记得到首页检查并clear move mode!')
         fieldDlg.value?.close()
       }
     })
   }
 }
+
+function checkFileTitle(track_path:string, track_artist:string, track_title:string){
+  let file_name = getFileNameWithoutExt(track_path)
+  let artist = track_artist.split(',')
+  let correct_name = artist + ' - ' + track_title
+  return file_name !== correct_name
+}
+function handleCorrectName(id:string){
+  correctName(id).then((res) => {
+    if(res.code == 200){
+      invalidateCache(getAlbum(album.value.id))
+      alert(`Name corrected!`)
+    }
+  })
+}
 </script>
 
 <template>
-  <div class=" w-full h-full flex">
-    <div class=" flex-none flex flex-col w-96">
+  <div class=" w-full h-full flex text-sm">
+    <div class=" flex-none h-full flex flex-col w-96">
       <div class=" p-2 flex-none grid grid-cols-9 gap-2 w-full bg-white rounded-lg">
         <template v-for="achar in artistChars"> 
           <div v-if="achar.hasArtist && artistChar == achar.charName" class=" bg-cyan-700 text-white rounded-md p-1 aspect-square place-content-center cursor-pointer">
@@ -251,23 +293,29 @@ function updateColumn() {
           </div>
         </template>
       </div>
-      <div class=" flex-1 flex mt-2">
-        <div class=" flex-none w-32 h-full p-2 overflow-y-auto bg-white rounded-lg">
-          <template v-for="ar in artists.data"> 
-            <div class=" p-1 cursor-pointer" @click="handleArtist(ar.id)">{{ ar.name }}</div>
-          </template>
+      <div class=" flex-none mt-2">
+        <input type="checkbox" v-model="showNoPathArtists" @change="filterArtists">过滤无Path歌手</input>
+      </div>
+      <div class=" flex-1 flex mt-2 overflow-y-auto">
+        <div class=" flex-none w-32 p-2 overflow-y-auto bg-white rounded-lg">
+            <div v-for="ar in artists.data" class=" p-1 cursor-pointer" @click="handleArtist(ar.id)">{{ ar.name }}</div>
         </div>
-        <div class=" flex-1 h-full ml-2 p-2 overflow-y-auto bg-white rounded-lg">
-          <template v-for="album in artist.albums">
-            <div class=" p-1 cursor-pointer" @click="handleAlbum(album.id)">{{ album.name }}</div>
-          </template> 
+        <div class=" flex-1 ml-2 p-2 overflow-y-auto bg-white rounded-lg">
+            <div v-for="album in artist.albums" class=" p-1 cursor-pointer" @click="handleAlbum(album.id)">{{ album.name }}</div>
         </div>
       </div>
     </div>
     <div class=" flex-1 flex flex-col h-full ml-2 p-2 bg-white rounded-lg">
       <div class=" flex-none flex justify-between">
         <div class=" flex-1">
-          <div class=" w-full p-2 border-b-2 border-b-gray-400">{{ artist.name }}</div>
+          <div class=" flex align-middle w-full p-2 border-b-2 border-b-gray-400">
+            <div class=" content-center">{{ artist.name }}</div>
+            <div v-if="artist.path == ''">
+              <span class=" ml-4"><button class=" py-0" @click="handleSetArtistPath">设定path</button></span>
+              <span class=" ml-2"><button class=" py-0" @click="handleNewArtistFolder('cn')">新建目录CN</button></span>
+              <span class=" ml-2"><button class=" py-0" @click="handleNewArtistFolder('fr')">新建目录FR</button></span>
+            </div>
+          </div>
           <div class=" flex w-full p-2">
             <div class=" flex-none w-32 aspect-square" @click="triggleFaceSelect">
               <img v-if="faceSrc !== ''" :src="faceSrc" v-default-src="DefaultFace" class=" inline-block w-32 aspect-square object-cover" />
@@ -298,8 +346,8 @@ function updateColumn() {
           </div>
         </div>
       </div>
-      <div class=" flex-1 p-2 w-full h-full bg-white rounded-lg">
-        <div class=" flex-1 h-full overflow-y-auto"> 
+      <div class=" flex-1 p-2 w-full h-full overflow-y-auto bg-white rounded-lg">
+        <div class=" h-full overflow-y-auto"> 
           <w-table :data="album.tracks"> 
             <w-column width="3%"
               :row-selectable="true" 
@@ -307,9 +355,11 @@ function updateColumn() {
               v-model:all-selected="allSelected"
               @toggle-all-selection="handleAllSelection"
             />
-            <w-column width="8%" label="IMG">
+            <w-column width="6%" label="IMG">
               <template #default="scope">
-                <img :src="scope.row.cover" v-default-src="DefaultTrack" class="w-12 h-12 object-cover rounded-md" />
+                <div class=" place-items-center" :title="'Path:'+ scope.row.path">
+                  <img :src="scope.row.cover" v-default-src="DefaultTrack" class="w-9 h-9 object-cover rounded-md" />
+                </div>
               </template>
             </w-column>
             <w-column label="Title" prop="title" :cell-editable="true" @update-value="updateCellValue" />
@@ -322,18 +372,38 @@ function updateColumn() {
             <w-column width="18%" label="Album" prop="album" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
             <w-column width="5%" label="Year" prop="year" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
             <w-column width="10%" label="Genre" prop="genre" :column-editable="true" :cell-editable="true" @edit-column="handleEditColumn" @update-value="updateCellValue" />
+            <w-column width="5%" label="REN">
+              <template #default="scope">
+                <div v-if="checkFileTitle(scope.row.path, scope.row.artist, scope.row.title)">
+                  <span class=" px-2 py-1 cursor-pointer bg-cyan-700 text-white rounded-md" @click="handleCorrectName(scope.row.id)">Ren</span>
+                </div>
+              </template>
+            </w-column>
           </w-table>
         </div>
       </div>
     </div>
   </div>
   <dialog ref="fieldDlg" class=" absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-40 p-2">
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">{{ edit_column }}</label><input type="text" v-model="column_value" />
-    </div>
-    <div class=" w-full flex justify-around my-2">
-      <button type="button" @click="updateColumn" class=" block w-16">OK</button>
-      <button type="button" @click="fieldDlg?.close()" class=" block w-16">Close</button>
+    <div class=" flex flex-col h-full">
+      <div class=" flex-1 w-full my-2">
+        <label class=" inline-block w-20">{{ edit_column }}</label><input type="text" v-model="column_value" />
+        <div v-if="edit_column === 'artist'" class=" mt-2">
+          <input type="radio" v-model="artist_area" value="CN" /><label>CN</label>
+          <input type="radio" class=" ml-2" v-model="artist_area" value="FR" /><label>FR</label>
+        </div>
+      </div>
+      <div class=" flex-none w-full flex justify-around my-2">
+        <button type="button" @click="updateColumn" class=" block w-16">OK</button>
+        <button type="button" @click="fieldDlg?.close()" class=" block w-16">Close</button>
+      </div>
     </div>
   </dialog>
 </template>
+
+<style scoped> 
+@reference "tailwindcss"
+button {
+  @apply bg-cyan-600 text-white rounded-md;
+}
+</style>
