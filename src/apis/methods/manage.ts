@@ -1,67 +1,51 @@
-import { generalAlova, uploadAlova } from "..";
+import { generalAlova } from "@/apis";
 
-const baseSrcURL = import.meta.env.VITE_BASE_SRC_URL;
+// const baseSrcURL = import.meta.env.VITE_BASE_SRC_URL;
+const baseURL = import.meta.env.VITE_BASE_URL;
 
 export const login = (username: string, password: string) => { 
   const formData = new FormData();
   formData.append("username", username);
   formData.append("password", password);
-  const method = generalAlova.Post<ResponseData<{'access_token': string, 'refresh_token': string, 'token_type': string}>>("/auth/login", formData);
+  const method = generalAlova.Post<{'access_token': string, 'refresh_token': string, 'token_type': string}>("/auth/login", formData);
   method.meta = { authRole: 'login' }
   return method;
 }
 export const refreshToken = () => {
-  const method = generalAlova.Post<ResponseData<{'access_token': string, 'token_type': string}>>('/auth/refresh')
+  const method = generalAlova.Get<{'access_token': string, 'token_type': string}>('/auth/refresh')
   method.meta = { authRole: 'refreshToken' }
   return method;
 }
 export const register = (username: string, password: string, is_admin: boolean) => { 
-  const method = generalAlova.Post<ResponseData<string>>("/auth/register", {username, password, is_admin});
+  const method = generalAlova.Post<string>("/auth/register", {username, password, is_admin});
   method.meta = { authRole: null }
   return method;
 }
 export const getCurrentUser = () => { 
-  return generalAlova.Get<ResponseData<any>>("/auth/me");
+  return generalAlova.Get("/auth/me");
 }
 
 // #region Index
 export const checkInitialized = () => { 
-  const method = generalAlova.Get<ResponseData<{'initialized': boolean}>>("/system/initialized");
+  const method = generalAlova.Get<{'initialized': boolean}>("/system/initialized");
   method.meta = { authRole: null }
   return method;
 }
+export const getScanInfo = () => {
+  return generalAlova.Get<ScanInfo>("/admin/sysinfo/scaninfo");
+}
 export const getServerInfo = () => {
-  return generalAlova.Get<ResponseData<any>>("/admin/dashboard/stats");
+  return generalAlova.Get<any>("/admin/sysinfo/stats", { hitSource: ['transfer-files'] });
+}
+export const initializeMeta = () => { 
+  return generalAlova.Post("/admin/sysinfo/initializemeta");
 }
 export const startWatcher = () => { 
-  return generalAlova.Post<ResponseData<string>>("/admin/scan/startwatcher");
+  return generalAlova.Post<string>("/admin/scan/startwatcher");
 }
 export const stopWatcher = () => { 
-  return generalAlova.Post<ResponseData<string>>("/admin/scan/stopwatcher");
+  return generalAlova.Post<string>("/admin/scan/stopwatcher");
 }
-export const startScan = () => { 
-  return generalAlova.Post<ResponseData<string>>("/admin/scan/start");
-}
-export const stopScan = () => { 
-  return generalAlova.Post<ResponseData<string>>("/admin/scan/cancel");
-}
-export const getScanningStatus = () => { 
-  return generalAlova.Get<ResponseData<{user: string, is_running: boolean, progress: Record<string, any>}>>("/admin/scan/progress");
-}
-
-export const clearMoveMode = () => { 
-  // 清除移动模式，deprecated
-  return generalAlova.Get<ResponseData<string>>("/clearmovemode");
-}
-export const getDbMetaInfo = () => { 
-  // 获取数据库元信息， deprecated
-  return generalAlova.Get<ResponseData<IMetaInfo>>("/getdbmetainfo");
-}
-export const getArtistStatistics = () => { 
-  // 获取歌手统计信息， deprecated
-  return generalAlova.Get<ResponseData<{name:string, count: number}[]>>("/getartiststatistics");
-}
-
 // #endregion
 
 // #region upload and transfer(stagging)
@@ -69,152 +53,258 @@ export const uploadFile = (file: File, name: string) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("name", name);
-  return uploadAlova.Post("/upload/uploadfile", formData, { shareRequest: false});
+  return generalAlova.Post("/admin/upload/uploadfile", formData, { 
+    name: 'upload-file',
+  });
 }
-// export const getStageSessions = () => { 
-//   return generalAlova.Get<ResponseData<StageSession[]>>("/getstagesessions");
-// }
-export const getFiles = () => {
-  return generalAlova.Get("/getfiles",{
-    transform: (res: ResponseData<TrackFile[]>) => {
-      return res.data.map((item) => {
+export const createStageSession = () => { 
+  return generalAlova.Post<{session_id: string}>("/admin/upload/staging/session", {}, {
+    name: 'create-session'
+  });
+}
+export const getStageSessions = () => { 
+  return generalAlova.Get<{sessions: SessionInfo[]}>("/admin/upload/staging/sessions", 
+    { hitSource: ['transfer-files', 'create-session', 'upload', 'add-files-to-session'] }
+  );
+}
+export const addFilesToSession = (session_id: string) => {
+  return generalAlova.Post("/admin/upload/staging/sessions/" + session_id + "/files",  {}, {
+    name: 'add-files-to-session',
+    transform: (res: SessionFile[]) => {
+      return res.map((item) => {
+          return {
+            ...item,
+            ver_activate: 0,
+            id: item.path,
+            is_modified: false,
+            cover: baseURL + `artwork/tmp/track/${item.path}?session_id=${session_id}`
+          }
+      })
+    }
+  })
+}
+export const getSessionFiles = (session_id: string) => {
+  return generalAlova.Get("/admin/upload/staging/sessions/" + session_id + "/files",{
+    transform: (res: SessionFile[]) => {
+      return res.map((item) => {
         return {
           ...item,
           ver_activate: 0,
-          id: item.path
+          id: item.path,
+          is_modified: false,
+          cover: baseURL + `artwork/tmp/track/${item.path}?session_id=${session_id}`
         }
       })
-    }
+    },
+    hitSource: [
+      'add-files-to-session',
+      'update-meta-version',
+      'update-meta-tags'
+    ]
   });
 }
-export const switchVersionType = (path: string, ver_type: string) => {
-  return generalAlova.Post<ResponseData<TrackFile>>("/switchversiontype", { path, ver_type });
+export const generateFingerprint = (filename: string, session_id: string) => {
+  return generalAlova.Post<Fingerprint>("/admin/upload/staging/sessions/fingerprint", { filename, session_id }, {cacheFor: 1000 * 60 * 5});
 }
-export const cleanMetaTag = (items: {path: string, ver_type: string}[]) => { 
-  return generalAlova.Post<ResponseData<string>>("/cleanmetatag", {items});
+export const matchFingerprint = (duration: number, fingerprint: string) => {
+  return generalAlova.Post<{matched_list: AcoustInfo[]}>("/admin/upload/staging/sessions/match", { duration, fingerprint }, {cacheFor: 1000 * 60 * 5});
 }
-export const updateMetaTags = (items: string[], change: ChangeInfo) => { 
-  return generalAlova.Post<ResponseData<string>>("/updatemetatags", {items, change});
+// export const switchVersionType = (path: string, ver_type: string) => {
+//   return generalAlova.Post<ResponseData<TrackFile>>("/switchversiontype", { path, ver_type });
+// }
+export const updateMetaVersion = (session_id: string, items: {id: string, use_apev2: boolean}[]) => { 
+  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/updateversion`, {items}, {name: 'update-meta-version'});
 }
-export const updateFieldTag = (items: string[], field: keyof TrackFile, value: string) => { 
-  return generalAlova.Post<ResponseData<string>>("/updatefieldtag", {items, field, value});
+export const updateMetaTags = (session_id: string, formData: FormData) => { 
+  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/updatemetadatas`, formData, {name: 'update-meta-tags'});
 }
-export const transferFiles = (items: string[], lang: string, playlist: string) => { 
-  return generalAlova.Post<ResponseData<string>>("/transferfiles", {items, lang, playlist});
+// export const updateFieldTag = (items: string[], field: keyof TrackFile, value: string) => { 
+//   return generalAlova.Post<ResponseData<string>>("/updatefieldtag", {items, field, value});
+// }
+export const transferFiles = (items: string[], lang: string, session_id: string, playlist: string) => { 
+  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/archive?lang=${lang}`,
+    { items, playlist },
+    { name: "transfer-files"}
+  );
 }
 // #endregion
 
 // #region  Edit
 export const getArtistChars = () => { 
-  return generalAlova.Get("/getartistchars",{
-    transform: (res: ResponseData<[string,boolean][]>) => {
-      return res.data.map(item => ({
+  return generalAlova.Get("/admin/edit/getartistchars",{
+    transform: (res: [string, boolean][]) => {
+      return res.map(item => ({
         charName: item[0], 
         hasArtist: item[1],
       }));
     }
   });
 }
-export const getArtists = (achar: string, with_no_path: boolean = false) => { 
-  return generalAlova.Get<ResponseData<Artist[]>>("/getartists/" + achar, {params:{with_no_path}});
+export const getArtists = (achar: string, without_path: boolean = false) => { 
+  return generalAlova.Get<Artist[]>("/admin/edit/getartists/" + achar, {params:{without_path}});
 }
-export const getArtist = (id: string) => { 
-  return generalAlova.Get("/getartist/" + id, {
-    transform: (res: ResponseData<ArtistInfo>) => {
+export const getArtist = (id: number) => { 
+  return generalAlova.Get("/admin/edit/artist/" + id, {
+    transform: (res: ArtistInfo) => {
       return {
-        ...res.data,
-        face: baseSrcURL + 'getartistart?type=face&id=' + res.data.id,
-        portrait: baseSrcURL + 'getartistart?type=portrait&id=' + res.data.id,
+        ...res,
+        face: baseURL + `artwork/artist/${res.id}?img_cate=face`,
+        portrait: baseURL + `artwork/artist/${res.id}?img_cate=portrait`,
       };
     }
   });
 }
-export const getAlbum = (id: string) => { 
-  return generalAlova.Get("/getalbum/" + id, {
-    transform: (res: ResponseData<AlbumInfo>) => {
+export const getAlbum = (id: number) => { 
+  return generalAlova.Get("/admin/edit/album/" + id, {
+    transform: (res: AlbumInfo) => {
       return {
-        ...res.data,
-        cover: baseSrcURL + 'getcover?size=512&id=' + id,
-        tracks: res.data.tracks.map(item => ({
+        ...res,
+        cover: baseURL + `artwork/album/${res.id}`,
+        tracks: res.tracks.map(item => ({
           ...item,
-          cover: baseSrcURL + 'getcover?size=512&id=' + item.id,
+          cover: baseURL + `artwork/track/${item.id}`,
         })),
       };
     }
   });
 }
-export const setArtistPath = (id: string, lang?: string) => {
-  return generalAlova.Post<ResponseData<string>>("/setartistpath/" + id, {lang});
-}
-export const uploadArtistArt = (id: string, formData: FormData) => {
-  return uploadAlova.Post<ResponseData<string>>("/uploadartistart/" + id, formData, {
+export const uploadArtistArt = (formData: FormData) => {
+  return generalAlova.Post<string>('/admin/edit/uploadartistart', formData, {
     shareRequest: false
   });
 }
-export const uploadAlbumArt = (id: string, formData: FormData) => {
-  return uploadAlova.Post<ResponseData<string>>("/uploadalbumart/" + id, formData);
+export const uploadAlbumArt = (formData: FormData) => {
+  return generalAlova.Post<string>('/admin/edit/uploadalbumart', formData);
 }
-export const updateTrackFieldTag = (items: string[], field: keyof Track, value: string, area?: string) => { 
-  return generalAlova.Post<ResponseData<string>>("/updatetrackfieldtag", {items, field, value, area});
-}
-export const correctName = (id: string) => { 
-  return generalAlova.Get<ResponseData<string>>("/correctname/" + id);
+export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, value: string | number | string[]) => { 
+  return generalAlova.Post<string>("/admin/edit/updatetrackfieldtag", {items, field, value});
 }
 // #endregion
 
 // #region backup and restore
-export const backupAllPlaylists = () => { 
-  return generalAlova.Get<ResponseData<number>>("/backupallplaylists", {cacheFor: 0});
+export const getUserList = () => { 
+  return generalAlova.Get<UserInfo[]>("/admin/backup/getuserlist");
 }
-export const backupAllHits = () => { 
-  return generalAlova.Get<ResponseData<number>>("/backupallhits", {cacheFor: 0});
+export const exportUserPlaylistData = (user_id: number) => { 
+  return generalAlova.Get("/admin/backup/exportuserplaylistdata", {params: {user_id}});
 }
-export const restoreAllPlaylists = () => { 
-  return generalAlova.Get<ResponseData<Record<string, string>>>("/restoreallplaylists", {cacheFor: 0});
+export const exportUserHitData = (user_id: number) => { 
+  return generalAlova.Get("/admin/backup/exportuserhitdata", {params: {user_id}});
 }
-export const restoreAllHits = () => { 
-  return generalAlova.Get<ResponseData<string>>("/restoreallhits", {cacheFor: 0});
+export const exportUserFavData = (user_id: number) => { 
+  return generalAlova.Get("/admin/backup/exportuserfavdata", {params: {user_id}});
 }
+export const importUserPlaylistData = (formData: FormData) => { 
+  return generalAlova.Post<ImportResult>("/admin/backup/importuserplaylistdata", formData, {shareRequest: false});
+}
+export const importUserHitData = (formData: FormData) => { 
+  return generalAlova.Post<ImportResult>("/admin/backup/importuserhitdata", formData, {shareRequest: false});
+}
+export const importUserFavData = (formData: FormData) => { 
+  return generalAlova.Post<ImportResult>("/admin/backup/importuserfavdata", formData, {shareRequest: false});
+}
+// export const backupAllPlaylists = () => { 
+//   return generalAlova.Get<ResponseData<number>>("/backupallplaylists", {cacheFor: 0});
+// }
+// export const backupAllHits = () => { 
+//   return generalAlova.Get<ResponseData<number>>("/backupallhits", {cacheFor: 0});
+// }
+// export const restoreAllPlaylists = () => { 
+//   return generalAlova.Get<ResponseData<Record<string, string>>>("/restoreallplaylists", {cacheFor: 0});
+// }
+// export const restoreAllHits = () => { 
+//   return generalAlova.Get<ResponseData<string>>("/restoreallhits", {cacheFor: 0});
+// }
 // #endregion
 
 // #region  Scan
-export const getFolderStatus = () => { 
-  return generalAlova.Get<ResponseData<ScanFolder[]>>("/getfolderstatus");
+export const getScanFolder = () => { 
+  return generalAlova.Get<ScanFolder>("/admin/scan/scanfolderinfo");
 }
-export const scanFolders = () => { 
-  return generalAlova.Get<ResponseData<string>>("/scanfolders", { cacheFor: 0 });
+export const startScan = () => { 
+  return generalAlova.Post<string>("/admin/scan/start");
 }
-export const getScanStatus = () => { 
-  return generalAlova.Get<ResponseData<number>>("/getscanstatus", { cacheFor: 0 });
+export const stopScan = () => { 
+  return generalAlova.Post<string>("/admin/scan/cancel");
 }
 // #endregion
 
 // #region  Playlist
 export const getTmpPlaylistJsons = () => { 
-  return generalAlova.Get<ResponseData<{title: string, filename: string, source: string, items: string[]}[]>>("/gettmpplaylistjsons");
+  return generalAlova.Get<PlaylistJson[]>("/admin/backup/gettmpplaylistjsons");
 }
 export const getCurrentPlaylists = () => {
-  return generalAlova.Get<ResponseData<{title: string, filename: string, source: string, items: string[]}[]>>("/getcurrentplaylists");
+  return generalAlova.Get<PlaylistBackupInfo[]>("/admin/backup/getcurplaylists");
 }
-export const createPlaylistFromJson = (title: string, file_name: string) => {
-  return generalAlova.Post<ResponseData<{count: number, original_count: number, playlist: string}>>("/createplaylistfromjson",{title, file_name});
+export const getAllPlaylists = () => {
+  return generalAlova.Get<PlaylistBackupInfo[]>("/admin/backup/getallplaylists");
 }
-export const backupPlaylist = (id: string) => { 
-  return generalAlova.Post<ResponseData<string>>("/backupplaylist",{id});
+export const createPlaylistFromJson = (file_name: string) => {
+  return generalAlova.Post<string>("/admin/backup/createplaylistfromjson",{file_name});
+}
+export const backupPlaylist = (id: number) => { 
+  return generalAlova.Post<string>("/admin/backup/backupplaylist",{id});
 }
 export const deleteJson = (filename: string) => {
-  return generalAlova.Post<ResponseData<string>>("/deletejson",{filename});
+  return generalAlova.Delete<string>("/admin/backup/deleteplaylistjson",{filename});
 }
 // #endregion
 
 // #region logs
-export const getLogs = () => { 
-  return generalAlova.Get<ResponseData<string[]>>("/getlogs");
+export const getLogTypes = () => { 
+  return generalAlova.Get<LogTypes>("/admin/log/types");
+}
+export const getLogs = (
+  log_type: string | undefined, 
+  level: string | undefined, 
+  keyword: string | undefined, 
+  start_time: string | undefined, 
+  end_time: string | undefined, 
+  page: number, 
+  page_size: number
+) => { 
+  const params: Record<string, string | number> = {page, page_size}
+  if (log_type) params.log_type = log_type;
+  if (level) params.level = level;
+  if (keyword) params.keyword = keyword;
+  if (start_time) params.start_time = start_time;
+  if (end_time) params.end_time = end_time;
+  return generalAlova.Get<LogPagination>("/admin/log", {params});
+}
+export const exportLogs = (
+  log_type: string | undefined, 
+  level: string | undefined, 
+  keyword: string | undefined, 
+  start_time: string | undefined, 
+  end_time: string | undefined
+) => { 
+  const params: Record<string, string> = {}
+  if (log_type) params.log_type = log_type;
+  if (level) params.level = level;
+  if (keyword) params.keyword = keyword;
+  if (start_time) params.start_time = start_time;
+  if (end_time) params.end_time = end_time;
+  return generalAlova.Get<string>("/admin/log/export", {params});
 }
 // #endregion
 
 // #region tools
 export const getOutPlaylist = (plink: string) => { 
   return generalAlova.Post<ResponseData<OutPlaylist>>("/getoutplaylist", {plink});
+}
+export const testPost = (value: string) => { 
+  return generalAlova.Post("/admin/sysinfo/test", {text: value}, {
+    transform: (res: string) => 'the server response from post is ' + res
+  });
+}
+export const testPostBack = () => { 
+  return generalAlova.Post("/admin/sysinfo/backops", {}, {
+    transform: (res: string) => 'the server response from backops is ' + res
+  });
+}
+export const testGet = () => { 
+  return generalAlova.Get("/admin/sysinfo/test", {
+    transform: (res: string) => 'the server response from get is ' + res
+  });
 }
 // #endregion

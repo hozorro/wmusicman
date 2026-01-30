@@ -2,10 +2,11 @@
 
 @layer base {
   button {
-    background-color: var(--color-cyan-700);
-    color: var(--color-white);
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
+    @apply bg-cyan-700 text-white rounded cursor-pointer px-2 py-1;
+  }
+}
+@layer components {
+  .dialog-wrapper {
+    @apply bg-white shadow-lg rounded;
   }
 }

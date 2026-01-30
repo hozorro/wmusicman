@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
-import { getCurrentUser, checkInitialized } from "@/apis/methods/manage";
+import { checkInitialized } from "@/apis/methods/manage";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", 
@@ -14,6 +14,7 @@ const routes: RouteRecordRaw[] = [
       { path: "/playlist", name: "playlist", component: () => import("@/views/Playlist.vue") },
       { path: "/backup", name: "backup", component: () => import("@/views/Backup.vue") },
       { path: "/log", name: "log", component: () => import("@/views/Log.vue") },
+      { path: "/log", name: "settings", component: () => import("@/views/Settings.vue") },
       { path: "/help", name: "help", component: () => import("@/views/Help.vue")},
       { 
         path: "/tool", 
@@ -40,34 +41,42 @@ const router = createRouter({
 let initializedChecked = false;
 
 router.beforeEach(async (to, _, next) => { 
-  const token = localStorage.getItem("token");
-  if(token) {
-    try {
-      await getCurrentUser()
-      return next()
-    } catch (error) {
-      localStorage.removeItem("token")
-    }
+  if(to.path === '/login' || to.path === '/register') {
+    return next()
   }
   if (!initializedChecked) {
     try {
       const res = await checkInitialized()
-      const initialized = res.data.initialized
+      const initialized = res.initialized
       if (!initialized) {
         if(to.path !== '/register') {
           return next('/register')
         }
       } else {
-        return next()
+        initializedChecked = true
       }
     } catch (error) {
       console.log(error)
-      return next('/login')
+      alert('检查初始化状态时发生错误，请稍后再试')
     } finally {
       initializedChecked = true
     }
   }
-  next()
+  const token = localStorage.getItem("token");
+  const refresh_token = localStorage.getItem("refresh_token");
+  if(!token && !refresh_token) {
+    return next('/login')
+  }
+  // if(token) {
+  //   try {
+  //     await getCurrentUser()
+  //     return next()
+  //   } catch (error) {
+  //     localStorage.removeItem("token")
+  //     return next('/login')
+  //   }
+  // }
+  return next()
 });
 
 export default router;

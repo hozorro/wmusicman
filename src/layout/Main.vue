@@ -1,17 +1,52 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
-import { scanState } from '@/composables/key';
-import type { ScanState } from '@/composables/key';
+import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
+import { scanState, type ScanState } from '@/composables/key';
+import { getScanInfo } from '@/apis/methods/manage';
 
-const {scanned} = inject<ScanState>(scanState) as ScanState;
-const flashMsg = computed(() => 'Scanner is running, ' + scanned.value + ' files scanned.')
-const displayFlash = computed(() => {
-  if(scanned.value != -1){
-    return 'block'
-  }else{
-    return 'none'
+const baseWsURL = import.meta.env.VITE_BASE_WS_URL;
+const { scanInfo, updateScanInfo } = inject<ScanState>(scanState) as ScanState;
+const flashMsg = computed(() => {
+  if (scanInfo.value.is_scanning) {
+    return `Scanner is running! ${scanInfo.value.scan_progress.proceeded} / ${scanInfo.value.scan_progress.total} processed.`
+  } else {
+    return ''
   }
 })
+const displayFlash = computed(() => scanInfo.value.is_scanning ? 'block' : 'none')
+
+let ws: WebSocket | null = null;
+
+onMounted(async () => { 
+  const info = await getScanInfo()
+  updateScanInfo(info)
+})
+
+onUnmounted(() => { 
+  if(ws) {
+    ws.close()
+    ws = null
+  }
+})
+
+watch(() => scanInfo.value.is_scanning, (val) => { 
+  if(val) {
+    if(ws == null) {
+      ws = new WebSocket(`${baseWsURL}scan-progress?token=${localStorage.getItem('token')}`)
+      ws.onmessage = (e) => { 
+        const data = JSON.parse(e.data)
+        if(data.type == 'scan_progress') {
+          updateScanInfo(data.data as ScanInfo)
+        }
+      }
+    }
+  } else {
+    if(ws) {
+      ws.close()
+      ws = null
+    }
+  }
+})
+
 const showNav = ref(true)
 </script>
 
@@ -42,6 +77,9 @@ const showNav = ref(true)
       </li>
       <li>
         <router-link to="/log" class=" block p-2" activeClass="active">Log</router-link>
+      </li>
+      <li>
+        <router-link to="/settings" class=" block p-2" activeClass="active">Settings</router-link>
       </li>
       <li>
         <router-link to="/tool" class=" block p-2" activeClass="active">Tool</router-link>

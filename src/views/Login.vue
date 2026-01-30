@@ -30,7 +30,7 @@ onSuccess(() => {
         <input type="text" v-model="form.username" class="w-full h-10 p-2 rounded-md border border-gray-300 focus:outline-none focus:border-blue-500" placeholder="用户"/>
         <input type="password" v-model="form.password" class="w-full h-10 p-2 mt-4 rounded-md border border-gray-300 focus:outline-none focus:border-blue-500" placeholder="密码"/>
       </div>
-      <button class="w-1/4 min-w-96 h-10 mt-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none" @click="Login">登录</button>
+      <button class="w-1/4 min-w-96 h-10 mt-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none" @click="Login" @keypress.enter.prevent="Login">登录</button>
     </div>
   </div>
 </template>

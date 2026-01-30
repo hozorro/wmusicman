@@ -4,12 +4,9 @@ import type { AlovaFileItem } from 'alova/client';
 import { useUploader } from 'alova/client';
 import WUpload from '@/components/WUpload.vue';
 import { uploadFile } from '@/apis/methods/manage';
+import { formatSize } from '@/utils/general';
 
 const uploadQueue = ref<AlovaFileItem[]>();
-// let fileItemInit = {
-//   status: 0 as 0|1|2|3,
-//   progress: {uploaded: 0, total: 0}
-// }
 const uploadingCount = ref(0);
 const needUpload = ref<AlovaFileItem[]>()
 const { fileList, appendFiles, removeFiles, onSuccess, upload } = useUploader(({file, name}) => uploadFile(file, name), {limit: 3});
@@ -36,11 +33,11 @@ function handleUpload(files: File[]) {
 }
 onSuccess((event) => {
   uploadingCount.value--
-  const data = event.data as ResponseData<string>
+  const data = event.data as ResponseData<{filename: string}>
   if (uploadQueue.value) {
-    const fileItem = uploadQueue.value.find(item => item.file.name === data.data)
+    const fileItem = uploadQueue.value.find(item => item.file.name === data.data.filename)
     if (fileItem) {
-      const uploadItem = fileList.value.find(item => item.file.name === data.data)
+      const uploadItem = fileList.value.find(item => item.file.name === data.data.filename)
       if (uploadItem) {
         removeFiles(uploadItem)
         fileItem.status = 2
@@ -66,7 +63,7 @@ onSuccess((event) => {
               <span v-else-if="f.status === 2" class=" w-full block h-6 bg-cyan-600 text-gray-300 text-center">100%</span>
               <span v-else-if="f.status === 3">{{ f.error?.message }}</span>
             </div>
-            <div class=" flex-none w-56 pr-2 text-right">{{ f.progress.uploaded }} / {{ f.progress.total }}</div>
+            <div class=" flex-none w-56 pr-2 text-right">{{ formatSize(f.progress.uploaded) }} / {{ formatSize(f.progress.total) }}</div>
           </div>
         </template>
       </div>

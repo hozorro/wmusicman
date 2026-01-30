@@ -1,0 +1,150 @@
+declare interface UserInfo {
+  id: number,
+  username: string,
+  last_login_at: string
+}
+
+declare interface SessionInfo {
+  session_id: string,
+  song_count: number,
+  created_at: number
+}
+
+declare interface MetaPrimary {
+  album?: string;
+  artists?: string[];
+  genres?: string[];
+  title?: string;
+  year?: number;
+}
+
+declare interface MetaAddtional { 
+  albumartist?: string[];
+  acoustid_id?: string;
+  cover_art_hash?: string;
+  mb_albumartistid?: string[];
+  mb_albumid?: string;
+  mb_artistids?: string[];
+  mb_trackid?: string; // recording id
+}
+
+declare interface SongInfo extends MetaPrimary {
+  path: string;
+  session: string;
+  cover?: string | Blob;
+}
+
+declare interface SessionFile {
+  id: string;
+  ver_activate: number;
+  path: string;
+  encoding?: string;
+  meta_id3: MetaPrimary;
+  meta_apev2: MetaPrimary;
+  meta_received?: MetaPrimary;
+  meta_additional: MetaAddtional;
+  version: string[];
+  is_modified: boolean;
+  cover?: string | Blob;
+}
+
+type SessionFileBasic = Pick<SessionFile, 'id' | 'ver_activate' | 'path' | 'encoding' | 'version' | 'cover'>
+
+declare type FileInfo = SessionFileBasic & MetaPrimary & MetaAddtional
+declare type FileInfoMeta = Pick<FileInfo, 'id' | 'cover' | keyof MetaPrimary | keyof MetaAddtional>
+
+declare interface AcoustArtist { 
+  id: str
+  name: str
+}
+
+declare interface AcoustInfo {
+  acoustid_id: str
+  id: string // recording id
+  title: string
+  duration: number
+  artists: AcoustArtist[]
+  release_id: string
+  release_title: string
+  release_year: number
+  release_artists: AcoustArtist[]
+  release_country: string
+  release_track_count: number
+  score: number
+}
+declare interface MatchResult extends AcoustInfo { 
+  cover_blob: Blob
+}
+
+declare interface Fingerprint {
+  duration: number
+  fingerprint: string
+}
+
+declare interface MetaEditInput {
+  title: {uniformValue: string, isDifferent: boolean}
+  artists: {uniformValue: string[], isDifferent: boolean}
+  album: {uniformValue: string, isDifferent: boolean}
+  year: {uniformValue: string, isDifferent: boolean} // transfer number to string, easy for type check
+  genres: {uniformValue: string[], isDifferent: boolean}
+}
+
+declare interface MetaEditOutput {
+  title: {value: string, isChanged: boolean}
+  artists: {value: string[], isChanged: boolean}
+  album: {value: string, isChanged: boolean}
+  year: {value: number, isChanged: boolean}
+  genres: {value: string[], isChanged: boolean}
+}
+
+declare type TransferItem = Pick<FileInfo, 'id' | 'title' | 'artists'>
+
+declare interface PlaylistJson {
+  title: string, 
+  filename: string, 
+  username: string, 
+  source: string, 
+  tracks: string[],
+  show?: boolean
+}
+
+declare interface PlaylistBackupInfo {
+  id: number, 
+  title: string, 
+  username: string,
+  tracks: {
+    title: string, 
+    artists: string[]
+  }[],
+  show?: boolean
+}
+
+declare interface ImportResult {
+  total: number,
+  success: number,
+  failed: number,
+  errors: string[]
+}
+
+declare interface LogTypes {
+  log_types: {label: string, value: string}[],
+  log_levels: {label: string, value: string}[]
+}
+
+declare interface LogItem {
+  time: string,
+  level: string,
+  logger: string,
+  location: string,
+  message: string,
+}
+
+declare interface LogPagination {
+  logs: LogItem[],
+  pagination: {
+    total: number,
+    page: number,
+    page_size: number,
+    total_pages: number
+  }
+}

@@ -15,7 +15,8 @@
     "paths": { 
       "@/*": ["src/*"]
     },
-    "types": ["node"]
+    "types": []
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "vueCompilerOptions": {"target": 3},
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

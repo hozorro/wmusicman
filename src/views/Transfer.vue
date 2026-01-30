@@ -1,341 +1,294 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRequest } from 'alova/client';
-import { invalidateCache } from 'alova';
-import WTable from '@/components/WTable.vue'
-import WColumn from '@/components/WColumn.vue';
-import { getFiles, switchVersionType, transferFiles, cleanMetaTag, updateMetaTags, updateFieldTag } from "@/apis/methods/manage.ts";
+import { ref, computed } from "vue";
+import { useRequest } from "alova/client";
+import WTable from "@/components/WTable.vue";
+import WColumn from "@/components/WColumn.vue";
+import { openDialog } from '@/composables/wdialog';
+import Sessions from './dialogs/Sessions.vue';
+import Acoust from "./dialogs/Acoust.vue";
+import EditMulti from "./dialogs/EditMulti.vue";
+import EditValue from "./dialogs/EditValue.vue";
+import EditMeta from "./dialogs/EditMeta.vue";
+import TransferOpt from "./dialogs/TransferOpt.vue";
+import { createStageSession, getSessionFiles, addFilesToSession, transferFiles } from "@/apis/methods/manage";
+import { useTransfer } from "@/composables/transfer";
 
+const curSession = ref('');
+const sessionFiles = ref<SessionFile[]>([])
+
+const { 
+  fileList, 
+  handleSwitchVersionType,
+  updateVersion,
+  updateMetas,
+  getUniformField,
+  getUniformFieldArray,
+  getUniformObject,
+  sortList,
+  setAcoustInfo,
+  setActivatedMetaProp
+} = useTransfer(sessionFiles)
+
+const is_modified = computed(() => {
+  return sessionFiles.value.some(item => item.is_modified)
+})
 const rowSelected = ref<string[]>([])
-const allSelected = computed(() => rowSelected.value?.length === fileList.value?.length)
-const metaDlg = ref<HTMLDialogElement>()
-const fieldDlg = ref<HTMLDialogElement>()
-const title = ref('')
-const artist = ref('')
-const album = ref('')
-const year = ref('')
-const genre = ref('')
-const title_editable = ref(false)
-const origin_title = ref('')
-const origin_artist = ref('')
-const origin_album = ref('')
-const origin_year = ref('')
-const origin_genre = ref('')
-const encodingChange = ref(false)
-const hasLatin1 = computed(()=>{
-  let items = fileList.value?.filter(item => rowSelected.value.includes(item.path))
-  let encoding = items?.map(item => item.encoding)
-  return encoding?.includes('LATIN1')
-})
-const delApev2 = ref(false)
-const hasApev2 = computed(()=>{
-  let items = fileList.value?.filter(item => rowSelected.value.includes(item.path))
-  let version = items?.map(item => item.version)
-  if (version) {
-    for(let v of version){
-      if(v.includes('APEv2')){
-        return true
-      }
-    }
-  }
-  return false
-})
-const edit_column = ref<EditableTrackMetaField>()
-const column_value = ref('')
-const origin_column_value = ref('')
-const progress = ref(0)
-const transfer_lang = ref('')
-const transferDlg = ref<HTMLDialogElement>()
-const create_playlist = ref(false)
-const playlist_title = ref('')
+const allSelected = computed(() => {
+  return rowSelected.value.length !==0 && rowSelected.value.length === sessionFiles.value.length;
+});
+const parseMulti = (tag: string[]) => {
+  return tag.join(', ')
+}
 
-function get_set<K extends keyof TrackFile>(items: TrackFile[], field: K): TrackFile[K]{
-  let item_list = items.map(item => item[field])
-  let item_set = new Set(item_list)
-  if(item_set.size === 1){
-    return item_set.values().next().value as TrackFile[K]
-  }else{
-    return '*多值*' as never as TrackFile[K]
+const { data: fetchedFiles, send: loadSessionFiles } = useRequest((session) => getSessionFiles(session), { immediate: false }
+)
+const selectSession = async () => {
+  const result = await openDialog<string>(Sessions, { title: '选择会话' })
+  if (result) {
+    curSession.value = result
+    await loadSessionFiles(result)
+    sessionFiles.value = [...fetchedFiles.value]
   }
 }
-const { data: fileList, send: getFileList} = useRequest(getFiles, { immediate: false })
-function handleGetFiles() {
-  getFileList()
+const createSession = async () => {
+  let res = await createStageSession()
+  curSession.value = res.session_id
+  sessionFiles.value = []
+}
+const { data: addedFiles, loading, error, send: addFiles } = useRequest(() => addFilesToSession(curSession.value), { immediate: false })
+const addFilesToCurSession = async () => {
+  if(curSession.value) {
+    await addFiles()
+    console.log(addedFiles.value)
+    if (addedFiles.value && addedFiles.value.length) {
+      sessionFiles.value.push(...addedFiles.value)
+    } else {
+      alert('没有可添加的文件')
+    }
+  }
 }
 function handleAllSelection() {
-  if(allSelected.value){
+  if (allSelected.value) {
     rowSelected.value = []
-  }else{
-    rowSelected.value = fileList.value.map(item => item.path)
+  } else {
+    rowSelected.value = sessionFiles.value.map(item => item.path)
   }
 }
-function handleEditMeta() {
-  if(rowSelected.value.length > 0){
-    if(rowSelected.value.length === 1){
-      let item = fileList.value.find(item => item.path === rowSelected.value[0])
-      if (item !== undefined) {
-        title.value = item.title
-        title_editable.value = true
-        artist.value = item.artist
-        album.value = item.album
-        year.value = item.year
-        genre.value = item.genre
-      }
-    }else{
-      title.value = '*多值*'
-      title_editable.value = false
-      let items = fileList.value.filter(item => rowSelected.value.includes(item.path))
-      artist.value = get_set(items, 'artist')
-      album.value = get_set(items, 'album')
-      year.value = get_set(items, 'year')
-      genre.value = get_set(items, 'genre')
-    }
-    origin_title.value = title.value
-    origin_artist.value = artist.value
-    origin_album.value = album.value
-    origin_year.value = year.value
-    origin_genre.value = genre.value
-    metaDlg.value?.showModal()
+async function handleUpdateVersion() {
+  let selected: string[]
+  if (rowSelected.value.length === 0) {
+    selected = sessionFiles.value.reduce((acc: string[], cur) => {
+      if (cur.encoding == 'latin-1' || cur.version.some(item => item.startsWith('ID3v1')))
+        acc.push(cur.id)
+      return acc
+    }, [])
+    if(!confirm(`将升级所有ID3v1文件，共${selected.length}个，是否继续(如需分别处理，请先选择要处理的文件）？`)) return
+  } else {
+    selected = rowSelected.value
+  }
+  const res = await updateVersion(curSession.value, selected)
+  if (res) {
+    alert('升级成功')
+    loadSessionFiles(curSession.value)
   }
 }
-function updateMeta() {
-  let change:ChangeInfo = {encoding: encodingChange.value, apev2: delApev2.value}
-  if(title.value != origin_title.value){
-    change.title = title.value
-  }
-  if(artist.value != origin_artist.value){
-    change.artist = artist.value
-  }
-  if(album.value != origin_album.value){
-    change.album = album.value
-  }
-  if(year.value != origin_year.value){
-    change.year = year.value
-  }
-  if(genre.value != origin_genre.value){
-    change.genre = genre.value
-  }
-  console.log({items: rowSelected.value, change: change})
-  updateMetaTags(rowSelected.value, change).then((res) => {
-    if (res.data == 'ok') {
-      if (metaDlg.value !== undefined) {
-        metaDlg.value.close()
-        invalidateCache(getFiles())
-        getFileList()
-      }
-    }
-  })
-}
-function handleEditColumn(field: EditableTrackMetaField) {
-  let items = rowSelected.value.length === 0 ? fileList.value : fileList.value.filter(item => rowSelected.value.includes(item.path))
-  edit_column.value = field
-  column_value.value = get_set(items, field) as string
-  origin_column_value.value = column_value.value
-  fieldDlg.value?.showModal()
-
-}
-function updateColumn(){
-  let items = rowSelected.value.length === 0 ? fileList.value.map(item => item.path) : rowSelected.value
-  console.log({field: edit_column.value, value: column_value.value, items: items})
-  updateFieldTag(items, edit_column.value!, column_value.value).then((res) => {
-    if (res.data == 'ok'){
-      for(let i = 0; i < fileList.value.length; i++){
-        if(items.includes(fileList.value[i].path)){
-          fileList.value[i][edit_column.value!] = column_value.value
-        }
-      }
-      fieldDlg.value?.close()
-    }
-  })
-}
-function updateCellValue(payload: {key: string, field: EditableTrackMetaField, value: string}){
-  // send to backend ★★★★★★★★★★★★★★★★★★★
-  console.log('change in ' + payload.field + ' of ' + payload.key + ':' + payload.value)
-  updateFieldTag([payload.key], payload.field, payload.value ).then((res) => {
-    if (res.data == 'ok'){
-      fileList.value.filter(item => item.path === payload.key)[0][payload.field] = payload.value
-      alert('修改成功')
-    }
-  })
-}
-function handleTransfer(lang: string){
-  // send to backend ★★★★★★★★★★★★★★★★★★★
-  if(rowSelected.value.length === 0){
-    alert('请选择文件')
-  }else{
-    transfer_lang.value = lang
-    transferDlg.value?.showModal()
-  }
-}
-function doTransfer(){
-  transferFiles(rowSelected.value, transfer_lang.value, create_playlist.value ? playlist_title.value : '').then((data) => {
-    if(data){
-      transferDlg.value?.close()
-      alert('Transfer Success!')
-      rowSelected.value = []
-      invalidateCache(getFiles())
-      getFileList()
-    }else{
-      alert('Transfer Failed!')
-    }
-  })
-}
-async function handleClean(){
-  let needClean = fileList.value.filter(item => item.version.includes('APEv2') || item.encoding === 'LATIN1')
-  let needCleanItems = needClean.map(item => ({path:item.path, ver_type:item.version[item.ver_activate!]}))
-  let clean_count = needCleanItems.length
-  if (clean_count === 0){
+async function handleModifyMeta() {
+  if (rowSelected.value.length === 0) {
+    alert('请选择要修改的文件')
     return
-  }else{
-    if(confirm('有'+needCleanItems.length+'个文件需要清除MetaTag及编码，是否继续？')){
-      let batched = Math.ceil(clean_count / 10)
-      for(let i = 0; i < batched; i++){
-        let res = await cleanMetaTag(needCleanItems.slice(i * 10, (i + 1) * 10))
-        if(res){
-          progress.value = Math.min((i + 1) * 10 / clean_count * 100, 100)
+  }
+  const meta = getUniformObject(rowSelected.value)
+  const result = await openDialog<MetaEditOutput>(EditMeta, {title: '修改meta', contentProps: { meta }})
+  if (result) {
+    for (let i = 0; i < sessionFiles.value.length; i++) {
+      if (rowSelected.value.includes(sessionFiles.value[i].id)) {
+        let key: keyof MetaEditOutput
+        for (key in result) {
+          setActivatedMetaProp(i, key, result[key].value)
         }
       }
-      invalidateCache(getFiles())
     }
   }
 }
-function handleSortData(payload: {path: string, field: SortableTrackMetaField, ascend: boolean}){
-  if(payload.ascend){
-    fileList.value.sort((a, b) => a[payload.field].localeCompare(b[payload.field]))
-  }else{
-    fileList.value.sort((a, b) => b[payload.field].localeCompare(a[payload.field]))
+async function handleSaveMeta() {
+  if (rowSelected.value.length === 0) {
+    alert('请选择要保存的文件')
+    return
+  }
+  const res = await updateMetas(curSession.value, rowSelected.value)
+  if (res) {
+    alert('保存成功')
   }
 }
-function handleSwitchVersionType(path:string, index: number){
-  let row = fileList.value.find(item => item.path === path)
-  if(row !== undefined) {
-    let ver_type = row.version[index]
-    if (ver_type !== undefined) {
-      switchVersionType(path, ver_type).then((res) => {
-          let item = res.data
-          item.ver_activate = index
-          fileList.value[fileList.value.indexOf(row)] = item
+async function handleOpenCellEditDlg(id: string, prop: keyof MetaPrimary) {
+  let index = sessionFiles.value.findIndex(item => item.id === id)
+  const result = await openDialog<string[]>(EditMulti, { title: '修改' + prop, contentProps: { multiValue: fileList.value[index][prop] } })
+  if (result) setActivatedMetaProp(index, prop, result)
+}
+function updateCellValue(payload: { key: string, field: keyof MetaPrimary, value: string | number }) {
+  const { key, field, value } = payload
+  let index = sessionFiles.value.findIndex(item => item.id === key)
+  setActivatedMetaProp(index, field, value)
+}
+async function handleEditColumn(prop: keyof MetaPrimary) {
+  if (rowSelected.value.length === 0) {
+    alert('请选择要修改的文件')
+    return
+  }
+  let result: string[] | string | number | null
+  if (prop === 'artists' || prop === 'genres') {
+    let {uniformValue, isDifferent} = getUniformFieldArray(prop, rowSelected.value)
+    result = await openDialog<string[]>(EditMulti, { 
+      title: '修改' + prop, 
+      contentProps: { multiValue: uniformValue, isDifferent } 
+    })
+  } else {
+    let {uniformValue, isDifferent} = getUniformField(prop, rowSelected.value)
+    result = await openDialog<string | number>(EditValue, { 
+      title: '修改' + prop, 
+      contentProps: { value: uniformValue, isDifferent } 
+    })
+  }
+
+  if (result) {
+    for (let i = 0; i < sessionFiles.value.length; i++) {
+      if (rowSelected.value.includes(sessionFiles.value[i].id)) {
+        setActivatedMetaProp(i, prop, result)
+      }
+    }
+  }
+}
+function handleSortData(payload: {field: keyof MetaPrimary, ascend: boolean}) {
+  const { field, ascend } = payload
+  sortList(field, ascend)
+}
+async function handleMatch(id: string) {
+  const f = fileList.value.find(item => item.id === id)
+  if(f) {
+    const props: SongInfo = {
+      title: f.title,
+      artists: f.artists,
+      album: f.album,
+      genres: f.genres,
+      year: f.year,
+      path: f.path,
+      session: curSession.value,
+      cover: f.cover
+    }
+    const result = await openDialog<MatchResult | null>(Acoust, { title: '匹配歌曲', contentProps: props })
+    if (result) setAcoustInfo(id, result)
+  }
+}
+async function handleTransfer(lang: 'CN' | 'FR') {
+  if (rowSelected.value.length === 0) {
+    alert('请选择要转移的文件')
+    return
+  }
+  const items = fileList.value.reduce((acc: TransferItem[], cur) => {
+    if (rowSelected.value.includes(cur.id)) {
+      acc.push({
+        id: cur.id, 
+        title: cur.title || '', 
+        artists: cur.artists || [],
       })
     }
+    return acc
+  }, [])
+  const result = await openDialog<string>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
+  if (result != null) {
+    await transferFiles(rowSelected.value, lang, curSession.value, result)
   }
 }
 </script>
+
 <template>
   <div class=" my-2">
-    <button type="button" class=" mr-2 p-2 w-28" @click="handleGetFiles">列出文件</button>
-    <button type="button" class=" mr-2 p-2 w-52" @click="handleClean">修正编码及MetaTag版本</button>
-    <button type="button" class=" mr-2 p-2 w-32" @click="handleEditMeta">修改MetaTag</button>
-    <button type="button" class=" mr-2 p-2 w-28" @click="handleTransfer('CN')">转移至CN</button>
-    <button type="button" class=" mr-2 p-2 w-28" @click="handleTransfer('FR')">转移至FR</button>
+    <button type="button" class=" rounded-r-none border-r border-r-gray-50" @click="selectSession">选择会话</button>
+    <button type="button" class=" mr-2 px-2 rounded-l-none" @click="createSession">+</button>
+    <button type="button" class=" mr-2" :disabled="loading" @click="addFilesToCurSession">添加文件</button>
+    <button type="button" class=" mr-2" @click="handleUpdateVersion">升级编码及meta版本</button>
+    <button type="button" :disabled="rowSelected.length == 0" class=" mr-2 disabled:bg-gray-500" @click="handleModifyMeta">修改meta</button>
+    <button type="button" :disabled="!is_modified || loading" class=" mr-2 disabled:bg-gray-500" @click="handleSaveMeta">保存meta</button>
+    <button type="button" class=" mr-2" @click="handleTransfer('CN')">转移至CN</button>
+    <button type="button" class=" mr-2" @click="handleTransfer('FR')">转移至FR</button>
   </div>
-  <div class=" h-1 bg-cyan-300" :style="{width: progress + '%'}"></div>
-  <div class=" h-[calc(100svh_-_6rem)] overflow-y-auto block">
-    <w-table :data="fileList">
-      <w-column width="3%"
-        :row-selectable="true" 
-        v-model:row-selected="rowSelected" 
+  <div class=" w-full my-1 p-2 rounded bg-gray-200">
+    当前会话：<span>{{ curSession }}</span><span v-if="error" class=" text-red-500 ml-4">{{ error.message }}</span>
+  </div>
+  <div class=" h-[calc(100svh_-_8rem)] overflow-y-auto">
+    <WTable :data="fileList">
+      <WColumn width="3%"
+        :row-selectable="true"
+        v-model:row-selected="rowSelected"
         v-model:all-selected="allSelected"
         @toggle-all-selection="handleAllSelection"
       />
-      <w-column width="12%" label="File">
+      <WColumn width="10%" label="File">
         <template #default="scope">
-          <div class=" inline-block text-xs text-amber-500" :title="'Path:'+ scope.row.path">
-            <template v-for="(v,i) in scope.row.version" :key="i">
-              <span class=" border rounded-xs px-1 mr-1 cursor-pointer"
-                :class="i === scope.row.ver_activate ? ' bg-amber-200' : ''"
-                @click="handleSwitchVersionType(scope.row.path, i)">
+          <div class=" text-xs" :title="'Path:' + scope.row.path">
+            <template v-for="(v, i) in scope.row.version" :key="i">
+              <span class=" inline-block mt-1 border border-amber-500 rounded-xs px-1 mr-1 cursor-pointer text-amber-500"
+                :class="{' bg-amber-200' : i === scope.row.ver_activate, 'border-amber-800 text-amber-800': scope.row.version[i] === 'MB'}"
+                @click="handleSwitchVersionType(scope.row.path, i as number)">
                 {{ v }}
               </span>
-            </template> | 
-            <span>{{ scope.row.encoding }}</span>
+            </template>
+            <span class=" inline-block mt-1 border border-emerald-500 rounded-xs px-1 text-emerald-500">{{ scope.row.encoding }}</span>
           </div>
         </template>
-      </w-column>
-      <w-column label="Title" prop="title" :cell-editable="true" @update-value="updateCellValue" />
-      <w-column width="18%" label="Artists" prop="artist" 
-        :column-editable="true" 
-        :cell-editable="true"
+      </WColumn>
+      <WColumn label="Title" prop="title" cell-editable="direct" @update-value="updateCellValue" />
+      <WColumn width="18%" label="Artists" prop="artists"
+        :column-editable="true"
+        cell-editable="dialog"
         :sortable="true"
-        @edit-column="handleEditColumn" 
+        :transform="parseMulti"
+        @edit-column="handleEditColumn"
+        @open-cell-edit-dlg="handleOpenCellEditDlg"
+        @sort-data="handleSortData"
+      />
+      <WColumn width="18%" label="Album" prop="album"
+        :column-editable="true"
+        cell-editable="direct"
+        @edit-column="handleEditColumn"
         @update-value="updateCellValue"
-        @sort-data="handleSortData" 
       />
-      <w-column width="18%" label="Album" prop="album" 
-        :column-editable="true" 
-        :cell-editable="true" 
-        @edit-column="handleEditColumn" 
-        @update-value="updateCellValue" 
+      <WColumn width="5%" label="Year" prop="year"
+        :column-editable="true"
+        cell-editable="direct"
+        @edit-column="handleEditColumn"
+        @update-value="updateCellValue"
       />
-      <w-column width="5%" label="Year" prop="year" 
-        :column-editable="true" 
-        :cell-editable="true" 
-        @edit-column="handleEditColumn" 
-        @update-value="updateCellValue" 
+      <WColumn width="5%" label="Genre" prop="genres"
+        :column-editable="true"
+        cell-editable="dialog"
+        :transform="parseMulti"
+        @edit-column="handleEditColumn"
+        @open-cell-edit-dlg="handleOpenCellEditDlg"
       />
-      <w-column width="10%" label="Genre" prop="genre" 
-        :column-editable="true" 
-        :cell-editable="true" 
-        @edit-column="handleEditColumn" 
-        @update-value="updateCellValue" 
-      />
-      <w-column width="5%" label="Has_Art" prop="has_art" />
-    </w-table>
+      <WColumn width="8%" label="Info">
+        <template #default="scope">
+          <div class=" inline-block text-xs">
+            <span 
+              class=" border border-sky-500 rounded-xs px-1 mr-1 text-sky-500"
+              :class="scope.row.cover_art_hash ? ' bg-sky-200' : ''"
+              :title="scope.row.cover_art_hash">CA</span>
+            <span 
+              class=" border border-fuchsia-500 rounded-xs px-1 mr-1 text-fuchsia-500"
+              :class="scope.row.mb_trackid ? ' bg-fuchsia-200' : ''"
+              :title="scope.row.mb_trackid">MB</span>
+            <span 
+              class=" border border-rose-500 rounded-xs px-1 mr-1 text-rose-500"
+              :class="scope.row.acoustid_id ? ' bg-rose-200' : ''"
+              :title="scope.row.acoustid_id">AC</span>
+          </div>
+        </template>
+      </WColumn>
+      <WColumn width="5%" label="Match">
+        <template #default="scope">
+          <button type="button" class=" h-6 px-1 py-0" @click="handleMatch(scope.row.id)">FPMB</button>
+        </template>
+      </WColumn>
+    </WTable>
   </div>
-  <dialog ref="metaDlg" class=" absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-1/3 p-2">
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">Title</label><input type="text" v-model="title" :disabled="!title_editable" />
-    </div>
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">Artist</label><input type="text" v-model="artist" />
-    </div>
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">Album</label><input type="text" v-model="album" />
-    </div>
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">Year</label><input type="text" v-model="year" />
-    </div>
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">Genre</label><input type="text" v-model="genre" />
-    </div>
-    <div class=" w-full my-2">
-      <input type="checkbox" v-model="encodingChange" id="encoding" :disabled="!hasLatin1">
-      <label for="encoding">Change encoding{{ hasLatin1?'(检测到Latin1编码)':'' }}</label>
-    </div>
-    <div class=" w-full my-2">
-      <input type="checkbox" v-model="delApev2" id="delapev2" :disabled="!hasApev2">
-      <label for="delapev2">Del APEv2 tags{{ hasApev2?'(检测到APEv2)':'' }}</label>
-    </div>
-    <div class=" w-full flex justify-around my-2">
-      <button type="button" @click="updateMeta" class=" block w-16">OK</button>
-      <button type="button" @click="metaDlg?.close()" class=" block w-16">Close</button>
-    </div>
-  </dialog>
-  <dialog ref="fieldDlg" class=" absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-40 p-2">
-    <div class=" w-full my-2">
-      <label class=" inline-block w-20">{{ edit_column }}</label><input type="text" v-model="column_value" />
-    </div>
-    <div class=" w-full flex justify-around my-2">
-      <button type="button" @click="updateColumn" class=" block w-16">OK</button>
-      <button type="button" @click="fieldDlg?.close()" class=" block w-16">Close</button>
-    </div>
-  </dialog>
-  <dialog ref="transferDlg" class=" absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 max-h-64 p-2">
-    <div class=" w-full my-2">
-      即将转移{{ rowSelected.length }}个文件到{{transfer_lang}}，是否将这些文件作为一个新的播放列表？<br />
-      <div class=" text-xs text-gray-400 bg-gray-100 p-1">这些文件会作为列表记录为一个json文件，后续待守护进程监测到文件并扫描到数据库后，可依据这个json文件手动创建播放列表。</div>
-    </div>
-    <div class=" h-14">
-      <div class=" w-full my-2">
-        <input type="checkbox" v-model="create_playlist" id="create_playlist" />
-        <label for="create_playlist">新建播放列表</label>
-      </div>
-      <div class=" w-full my-2" :style="{display:create_playlist?'block':'none'}">
-        <label class=" inline-block w-34">待建播放列表名称:</label><input type="text" v-model="playlist_title" placeholder="留空则使用日期" />
-      </div>
-    </div>
-    <div class=" w-full flex justify-around my-4">
-      <button type="button" @click="doTransfer" class=" block w-16">OK</button>
-      <button type="button" @click="transferDlg?.close()" class=" block w-16">Close</button>
-    </div>
-  </dialog>
 </template>

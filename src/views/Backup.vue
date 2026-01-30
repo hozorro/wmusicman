@@ -1,53 +1,122 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { backupAllPlaylists, backupAllHits, restoreAllPlaylists, restoreAllHits } from '@/apis/methods/manage'
+import { ref, computed, onMounted, useTemplateRef } from 'vue'
+import { getUserList, exportUserPlaylistData, exportUserHitData, exportUserFavData, importUserPlaylistData, importUserHitData, importUserFavData } from '@/apis/methods/manage'
 
-const backupItems = ref<string[]>(['playlist', 'hits'])
-const restoreItems = ref<string[]>(['playlist', 'hits'])
+const users = ref<UserInfo[]>([])
+const selectedUserId = ref<number>()
+const selectedUser = computed(() => users.value.find(user => user.id == selectedUserId.value))
+const isUpdate = ref(false)
+const filePlaylistJson = useTemplateRef('filePlaylistJson')
+const fileHitJson = useTemplateRef('fileHitJson')
+const fileFavJson = useTemplateRef('fileFavJson')
 const optInfo = ref('')
 
-async function handleBackup() {
-  optInfo.value = 'Begin to backup...'
-  if(backupItems.value.includes('playlist')) {
-    const answer = confirm('将备份包括所有歌单、歌曲播放记录，如要选择备份部分歌单，请移步Playlist页面。请确认是否继续？')
-    if(!answer) return
-    const resPlaylist = await backupAllPlaylists()
-    optInfo.value += `\n${resPlaylist.data} playlists backed`
-  }
-  if(backupItems.value.includes('hits')){
-    const resHits = await backupAllHits()
-    optInfo.value += `\n${resHits.data} hits backed`
-  }
-}
+onMounted(async () => { 
+  users.value = await getUserList()
+})
 
-async function handleRestore() { 
-  optInfo.value = 'Begin to restore...'
-  if(restoreItems.value.includes('playlist')) {
-    const answer = confirm('将恢复所有歌单，如要恢复部分歌单，请移步Playlist页面。请确认是否继续？')
-    if(!answer) return
-    const resPlaylist = await restoreAllPlaylists()
-    Object.entries(resPlaylist.data).forEach(([pl, count]) => {
-      optInfo.value += `\n${pl} restored ${count} tracks`
+const showOperationInfo = (result: ImportResult) => {
+  optInfo.value += `\n导入完成: \n --成功：${result.success}\n --失败：${result.failed}\n`
+  if(result.errors.length > 0){
+    optInfo.value += `\n--错误信息：\n`
+    result.errors.forEach(error => {
+      optInfo.value += `\n ----${error}`
     })
   }
-  if(restoreItems.value.includes('hits')) {
-    const resHits = await restoreAllHits()
-    optInfo.value += `\n${resHits.data} hits restored`
+}
+async function handleExportUserPlaylistData() { 
+  if(selectedUserId.value){
+    optInfo.value = `开始导出用户${selectedUser.value?.username}的歌单数据...`
+    await exportUserPlaylistData(selectedUserId.value)
+    optInfo.value = '导出完成'
+  }
+}
+async function handleImportPlaylistData() { 
+  if(filePlaylistJson.value && filePlaylistJson.value.files && filePlaylistJson.value.files.length > 0 && selectedUserId.value) {
+    const formData = new FormData()
+    formData.append('file', filePlaylistJson.value.files[0])
+    formData.append('is_update', isUpdate.value ? '1' : '0')
+    formData.append('user_id', selectedUserId.value.toString())
+    optInfo.value = `开始导入用户${selectedUser.value?.username}的歌单数据...`
+    const result = await importUserPlaylistData(formData)
+    showOperationInfo(result)
+  }
+}
+async function handleExportUserHitData() { 
+  if(selectedUserId.value){
+    optInfo.value = `开始导出用户${selectedUser.value?.username}的播放数据...`
+    await exportUserHitData(selectedUserId.value)
+    optInfo.value = '导出完成'
+  }
+}
+async function handleImportHitData() { 
+  if(fileHitJson.value && fileHitJson.value.files && fileHitJson.value.files.length > 0 && selectedUserId.value) {
+    const formData = new FormData()
+    formData.append('file', fileHitJson.value.files[0])
+    formData.append('user_id', selectedUserId.value?.toString())
+    optInfo.value = `开始导入用户${selectedUser.value?.username}的播放数据...`
+    const result = await importUserHitData(formData)
+    showOperationInfo(result)
+  }
+}
+async function handleExportUserFavData() { 
+  if(selectedUserId.value){
+    optInfo.value = `开始导出用户${selectedUser.value?.username}的收藏数据...`
+    await exportUserFavData(selectedUserId.value)
+    optInfo.value = '导出完成'
+  }
+}
+async function handleImportFavData() { 
+  if(fileFavJson.value && fileFavJson.value.files && fileFavJson.value.files.length > 0 && selectedUserId.value) {
+    const formData = new FormData()
+    formData.append('file', fileFavJson.value.files[0])
+    formData.append('user_id', selectedUserId.value?.toString())
+    optInfo.value = `开始导入用户${selectedUser.value?.username}的收藏数据...`
+    const result = await importUserFavData(formData)
+    showOperationInfo(result)
   }
 }
 </script>
 
 <template>
-  <div class=" my-2 flex align-middle">
-    <div class=" border p-1 border-cyan-500 border-dotted rounded-md mr-2">
-      <input type="checkbox" id="playlist" value="playlist" class=" mr-1" v-model="backupItems"><label for="playlist">歌单</label>
-      <input type="checkbox" id="hits" value="hits" class=" ml-2 mr-1" v-model="backupItems"><label for="hits">播放记录</label>
-      <button type="button" class=" mx-2 p-2 w-28" @click="handleBackup">备份播放数据</button>
+  <div class=" my-2 flex w-full">
+    <div class=" flex-none w-48">
+      <select v-model="selectedUserId" size="10" class=" w-full p-2 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500">
+        <option v-for="user in users" :key="user.id" :value="user.id">{{ user.username }}</option>
+      </select>
     </div>
-    <div class=" border p-1 border-cyan-500 border-dotted rounded-md mr-2">
-      <input type="checkbox" id="playlist" value="playlist" class=" mr-1" v-model="restoreItems"><label for="playlist">歌单</label>
-      <input type="checkbox" id="hits" value="hits" class=" ml-2 mr-1" v-model="restoreItems"><label for="hits">播放记录</label>
-      <button type="button" class=" mx-2 p-2 w-28" @click="handleRestore">恢复播放数据</button>
+    <div class=" flex-1 ml-4">
+      <div class=" rounded-md bg-gray-100"><strong>用户：</strong>{{ selectedUser?.username }} (上次登录于{{ selectedUser?.last_login_at }})</div>
+      <div class=" my-2 grid grid-cols-[20rem_1fr] gap-1">
+        <div class=" my-2">
+          <span>导出</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>歌单数据：</span>
+          <button type="button" class=" p-1 w-20" @click="handleExportUserPlaylistData">导出</button>
+        </div>
+        <div class=" my-2"> 
+          <span>导入歌单数据到</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>：</span>
+          <input type="file" ref="filePlaylistJson" accept="application/json" class=" w-48 text-sm text-gray-500" />
+          <input type="checkbox" v-model="isUpdate" class=" ml-2" />覆盖已有歌单
+          <button type="button" class=" ml-1 p-1 w-20" @click="handleImportPlaylistData">导入</button>
+        </div>
+        <div class=" my-2">
+          <span>导出</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>播放数据：</span>
+          <button type="button" class=" p-1 w-20" @click="handleExportUserHitData">导出</button>
+        </div>
+        <div class=" my-2"> 
+          <span>导入播放数据到</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>：</span>
+          <input type="file" ref="fileHitJson" accept="application/json" class=" w-48 text-sm text-gray-500" />
+          <button type="button" class=" ml-2 p-1 w-20" @click="handleImportHitData">导入</button>
+        </div>
+        <div class=" my-2">
+          <span>导出</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>Fav数据：</span>
+          <button type="button" class=" p-1 ml-2 w-20" @click="handleExportUserFavData">导出</button>
+        </div>
+        <div class=" my-2"> 
+          <span>导入Fav数据到</span><span class=" text-cyan-600">{{selectedUser?.username || '用户'}}</span><span>：</span>
+          <input type="file" ref="fileFavJson" accept="application/json" class=" w-48 text-sm text-gray-500" />
+          <button type="button" class=" ml-3 p-1 w-20" @click="handleImportFavData">导入</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class=" my-2 text-red-500 text-sm font-black">

@@ -4,27 +4,34 @@ import WCell from './WCell.vue';
 
 interface Props {
   scope?: Record<string, any>;
-  prop?: keyof TrackFile | keyof Track;
+  prop?: any;
   width?: string;
   label?: string;
+  align?: 'left' | 'center' | 'right';
   rowSelectable?: boolean;
   columnEditable?: boolean;
-  cellEditable?: boolean;
+  cellEditable?: 'direct' | 'dialog';
   sortable?: boolean;
+  transform?: (value: any) => any;
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  transform: (value: any) => value
+})
 const rowSelected = defineModel<Array<any>>('rowSelected', {default: []});
 const allSelected = defineModel<boolean>('allSelected', {default:false});
 const sortAscend = ref(false)
 const sortField = ref('')
-const emits = defineEmits(['toggleAllSelection', 'editColumn', 'updateValue', 'sortData'])
+const emits = defineEmits(['toggleAllSelection', 'editColumn', 'openCellEditDlg', 'updateValue', 'sortData'])
 
 function toggleRowSelection() {
   rowSelected.value.includes(props.scope?.id) ? rowSelected.value.splice(rowSelected.value.indexOf(props.scope?.id), 1) : rowSelected.value.push(props.scope?.id)
 }
 function toggleAllRowsSelection() {
   emits('toggleAllSelection')
+}
+function handleOpenDlg() {
+  emits('openCellEditDlg', props.scope?.id, props.prop)
 }
 function handleUpdateValue(value: string) {
   emits('updateValue', {key: props.scope?.id, field: props.prop, value})
@@ -46,10 +53,17 @@ function changeSort(field: string) {
     <template v-else>
       <template v-if="prop">
         <template v-if="cellEditable">
-          <WCell :cellData="scope[prop]" @updateValue="handleUpdateValue" />
+          <WCell :align="align"
+            :cellData="props.transform(scope[prop])" 
+            :editAction="cellEditable" 
+            @opendlg="handleOpenDlg" 
+            @updateValue="handleUpdateValue" 
+          />
         </template>
         <template v-else>
-          {{ scope[prop] }}
+          <div :class="{'text-center': align == 'center', 'text-left': align == 'left', 'text-right': align == 'right'}">
+            {{ props.transform(scope[prop]) }}
+          </div>
         </template>
       </template>
       <template v-else>
@@ -65,8 +79,8 @@ function changeSort(field: string) {
     </template>
     <template v-else>
       <template v-if="columnEditable">
-        <th :style="{ width: width }">
-          <button type="button" class=" border rounded-b-sm" @click="emits('editColumn', prop)">{{ label }}</button>
+        <th :style="{ width: width }" class=" py-1">
+          <button type="button" class=" h-6 px-1 py-0" @click="emits('editColumn', prop)">{{ label }}</button>
           <span v-if="sortable" class=" ml-1 inline-block cursor-pointer" @click="changeSort(prop as string)">{{ sortAscend ? '▲' : '▼' }}</span>
         </th>
       </template>
