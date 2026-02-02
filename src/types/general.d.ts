@@ -16,7 +16,7 @@ declare interface ScanInfo {
   is_scanning: boolean,
   scan_progress: {
     total: number,
-    proceeded: number
+    processed: number
     success: number,
     failed: number,
     current_file: string

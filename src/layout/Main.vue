@@ -3,11 +3,25 @@ import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
 import { scanState, type ScanState } from '@/composables/key';
 import { getScanInfo } from '@/apis/methods/manage';
 
+const menuItems = [
+  { label: 'Home', to: '/', exact: true },
+  { label: 'Upload', to: '/upload' },
+  { label: 'Transfer', to: '/transfer' },
+  { label: 'Edit Info', to: '/edit' },
+  { label: 'Scanner', to: '/scan' },
+  { label: 'Playlist', to: '/playlist' },
+  { label: 'Backup', to: '/backup' },
+  { label: 'Log', to: '/log' },
+  { label: 'Settings', to: '/settings' },
+  { label: 'Tool', to: '/tool' },
+  { label: 'Help', to: '/help' },
+]
+
 const baseWsURL = import.meta.env.VITE_BASE_WS_URL;
 const { scanInfo, updateScanInfo } = inject<ScanState>(scanState) as ScanState;
 const flashMsg = computed(() => {
-  if (scanInfo.value.is_scanning) {
-    return `Scanner is running! ${scanInfo.value.scan_progress.proceeded} / ${scanInfo.value.scan_progress.total} processed.`
+  if (scanInfo.value.is_scanning && scanInfo.value.scan_progress) {
+    return `Scanner is running! ${scanInfo.value.scan_progress.processed} / ${scanInfo.value.scan_progress.total} processed.`
   } else {
     return ''
   }
@@ -32,12 +46,10 @@ watch(() => scanInfo.value.is_scanning, (val) => {
   if(val) {
     if(ws == null) {
       ws = new WebSocket(`${baseWsURL}scan-progress?token=${localStorage.getItem('token')}`)
-      ws.onmessage = (e) => { 
-        const data = JSON.parse(e.data)
-        if(data.type == 'scan_progress') {
-          updateScanInfo(data.data as ScanInfo)
-        }
-      }
+    }
+    ws.onmessage = (e) => { 
+      const data = JSON.parse(e.data)
+      updateScanInfo(data.data as ScanInfo)
     }
   } else {
     if(ws) {
@@ -54,38 +66,12 @@ const showNav = ref(true)
   <div class=" absolute top-10 w-4 h-10 bg-amber-500 rounded-r-md shadow z-10 opacity-20 hover:opacity-100 hover:cursor-pointer" :class="showNav ? 'left-32' : 'left-0'" @click="showNav=!showNav"></div>
   <nav class=" flex-none w-32 bg-cyan-600 h-svh" :class="{'hidden': !showNav }">
     <ul class=" text-white">
-      <li>
-        <router-link to="/" class=" block p-2" activeClass="active">Home</router-link>
-      </li>
-      <li>
-        <router-link to="/upload" class=" block p-2" activeClass="active">Upload</router-link>
-      </li>
-      <li>
-        <router-link to="/transfer" class=" block p-2" activeClass="active">Transfer</router-link>
-      </li>
-      <li>
-        <router-link to="/edit" class=" block p-2" activeClass="active">Edit Info</router-link>
-      </li>
-      <li>
-        <router-link to="/scan" class=" block p-2" activeClass="active">Scanner</router-link>
-      </li>
-      <li>
-        <router-link to="/playlist" class=" block p-2" activeClass="active">Playlist</router-link>
-      </li>
-      <li>
-        <router-link to="/backup" class=" block p-2" activeClass="active">Backup</router-link>
-      </li>
-      <li>
-        <router-link to="/log" class=" block p-2" activeClass="active">Log</router-link>
-      </li>
-      <li>
-        <router-link to="/settings" class=" block p-2" activeClass="active">Settings</router-link>
-      </li>
-      <li>
-        <router-link to="/tool" class=" block p-2" activeClass="active">Tool</router-link>
-      </li>
-      <li>
-        <router-link to="/help" class=" block p-2" activeClass="active">Help</router-link>
+      <li v-for="item in menuItems" :key="item.to">
+        <router-link 
+          :to="item.to" 
+          class=" block p-2" 
+          activeClass="active" 
+          :exactActiveClass="item.exact ? 'active' : ''">{{ item.label }}</router-link>
       </li>
     </ul>
   </nav>

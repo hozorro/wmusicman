@@ -12,7 +12,7 @@ import { getArtistChars, getArtists, getArtist, getAlbum, uploadArtistArt, uploa
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import DefaultFace from "@/assets/imgs/face.jpg";
 import DefaultPortrait from "@/assets/imgs/portrait.jpg";
-import DefaultTrack from "@/assets/imgs/track.png";
+import DefaultTrack from "@/assets/imgs/track.jpg";
 import DefaultAlbumArt from "@/assets/imgs/album.jpg";
 
 const artistChar = ref("");
