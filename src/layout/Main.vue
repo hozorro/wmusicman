@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
+import { EventSourcePolyfill } from 'event-source-polyfill';
 import { scanState, type ScanState } from '@/composables/key';
 import { getScanInfo } from '@/apis/methods/manage';
 
@@ -17,18 +18,18 @@ const menuItems = [
   { label: 'Help', to: '/help' },
 ]
 
-const baseWsURL = import.meta.env.VITE_BASE_WS_URL;
+const baseURL = import.meta.env.VITE_BASE_URL;
 const { scanInfo, updateScanInfo } = inject<ScanState>(scanState) as ScanState;
 const flashMsg = computed(() => {
   if (scanInfo.value.is_scanning && scanInfo.value.scan_progress) {
-    return `Scanner is running! ${scanInfo.value.scan_progress.processed} / ${scanInfo.value.scan_progress.total} processed.`
+    return `Scanner is running: ${scanInfo.value.scan_progress.processed} / ${scanInfo.value.scan_progress.total} processed.`
   } else {
     return ''
   }
 })
 const displayFlash = computed(() => scanInfo.value.is_scanning ? 'block' : 'none')
 
-let ws: WebSocket | null = null;
+let evtSrc: EventSourcePolyfill | null = null
 
 onMounted(async () => { 
   const info = await getScanInfo()
@@ -36,25 +37,44 @@ onMounted(async () => {
 })
 
 onUnmounted(() => { 
-  if(ws) {
-    ws.close()
-    ws = null
+  if(evtSrc) {
+    evtSrc.close()
+    evtSrc = null
   }
 })
 
 watch(() => scanInfo.value.is_scanning, (val) => { 
   if(val) {
-    if(ws == null) {
-      ws = new WebSocket(`${baseWsURL}scan-progress?token=${localStorage.getItem('token')}`)
+    if(evtSrc == null) {
+      evtSrc = new EventSourcePolyfill(`${baseURL}admin/scan/progress`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      })
     }
-    ws.onmessage = (e) => { 
-      const data = JSON.parse(e.data)
-      updateScanInfo(data.data as ScanInfo)
+    evtSrc.onmessage = (e) => { 
+      const data = JSON.parse(e.data) as ScanInfo
+      updateScanInfo(data)
+      if (data.is_scanning == false) { 
+        // when scanner finished, close the event source connection mannually
+        // if close it by watching the is_scanning, there will be a delay and may miss the last update of scan progress
+        // and error may occur when close the connection while it's still sending data
+        console.log('Scanner finished.')
+        evtSrc?.close()
+        evtSrc = null
+      }
+    }
+    evtSrc.onerror = () => { 
+      if(evtSrc) {
+        console.error('Error in scan progress event source, closing it.')
+        evtSrc.close()
+        evtSrc = null
+      }
     }
   } else {
-    if(ws) {
-      ws.close()
-      ws = null
+    if(evtSrc) {
+      evtSrc.close()
+      evtSrc = null
     }
   }
 })
