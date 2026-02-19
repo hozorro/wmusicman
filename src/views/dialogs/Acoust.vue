@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useRequest } from 'alova/client';
 import { formatTimeDuration } from '@/utils/general'
-import { compressImageBlob } from '@/utils/imgtools';
 import { generateFingerprint, matchFingerprint } from '@/apis/methods/manage'
 
 interface PropsSongInfo { // vue limitations, can not use declared interface with extends
@@ -15,11 +14,10 @@ interface PropsSongInfo { // vue limitations, can not use declared interface wit
   session: string,
   cover: string | undefined
 }
-interface CoverCache {
-  [prop: string]: {
-    blob: Blob,
-    created: number
-  }
+
+const COVER_API_CONFIG = {
+  baseUrl: import.meta.env.VITE_BASE_URL,
+  coverApi: 'artwork/staging/'
 }
 
 const props = defineProps<PropsSongInfo>()
@@ -38,13 +36,16 @@ const mcLoadFailed = ref(false)
 const mcLoaded = ref(false)
 const ogLoadFailed = ref(false)
 const useNewCoverArt = ref(false)
-const coverBlob = ref<Blob | null>(null)
-const mcCache = ref<CoverCache>({})
-const mcsLocalUrl = computed(() => {
+const mcCache = ref<Record<string, any>>({})
+const mcsUrl = computed(() => {
   if (selectedRow.value !== -1) {
-    let selectedItem = acoustInfoList.value[selectedRow.value]
-    if (!mcCache.value[selectedItem.release_id]) return ''
-    return URL.createObjectURL(mcCache.value[selectedItem.release_id].blob)
+    let release_id = acoustInfoList.value?.[selectedRow.value].release_id
+    if (mcCache.value?.[release_id]) {
+      return mcCache.value[release_id]
+    } else {
+      const timestamp = new Date().getTime()
+      return `${COVER_API_CONFIG.baseUrl}${COVER_API_CONFIG.coverApi}${release_id}?t=${timestamp}`
+    }
   }
   return ''
 })
@@ -70,86 +71,39 @@ const join_names = (arr: {id: string, name: string}[]) => {
   return arr.map(item => item.name).join(', ')
 }
 
-const revokeCoverUrl = (release_id: string) => {
-  if (mcCache.value[release_id]) {
-    URL.revokeObjectURL(URL.createObjectURL(mcCache.value[release_id].blob))
-  }
-}
-const cleanOverLimitCache = () => {
-  const cacheEntries = Object.entries(mcCache.value)
-  if (cacheEntries.length < 6) return
-
-  const sortedEntries = cacheEntries.sort((a, b) => a[1].created - b[1].created)
-  const entriesToRemove = sortedEntries.slice(0, cacheEntries.length - 5)
-  entriesToRemove.forEach(([release_id]) => {
-    revokeCoverUrl(release_id)
-    delete mcCache.value[release_id]
-  })
-}
-const fetchCover = async (release_id: string) => { 
-  const baseUrl = import.meta.env.VITE_COVER_ART_BASE_URL
-  const url = `${baseUrl}${release_id}?api_key=your-api-key-here-change-in-production`
-  try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Failed to fetch cover art')
-    const blob = await res.blob()
-    if (!blob.type.startsWith('image/')) {
-      throw new Error('Invalid cover art type')
-    }
-    return await compressImageBlob(blob, {
-      maxWidth: 512,
-      maxHeight: 512,
-      quilty: 0.8
-    })
-  } catch (error) {
-    console.error('Error request cover art:', error)
-    throw error
-  }
-}
-
+let debounceTimer: number | undefined = undefined
 async function handleRowSelect(id: number) {
-  mcLoadFailed.value = false
-  mcLoaded.value = false
-  if (selectedRow.value == id) {
-    selectedRow.value = -1
-    mcLoading.value = false
-  } else {
-    selectedRow.value = id
-    const release_id = acoustInfoList.value?.[id].release_id
-    const cachedCover = mcCache.value?.[release_id]
-    if (cachedCover) {
-      const now = Date.now()
-      const cacheAge = now - cachedCover.created
-      if (cacheAge < 1000 * 60 * 5) {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    if (selectedRow.value === id) {
+      selectedRow.value = -1
+      mcLoading.value = false
+    } else {
+      selectedRow.value = id
+      mcLoading.value = true
+      mcLoadFailed.value = false
+
+      if(mcCache.value?.[acoustInfoList.value?.[id].release_id]) {
         mcLoading.value = false
         return
-      } else {
-        delete mcCache.value?.[release_id]
-        revokeCoverUrl(release_id)
       }
     }
-    try {
-      const cBlob = await fetchCover(release_id)
-      mcCache.value[release_id] = {blob: cBlob, created: Date.now()}
-      cleanOverLimitCache()
-      mcLoading.value = false
-    } catch (error) {
-      mcLoading.value = false
-      mcLoadFailed.value = true
-      mcLoaded.value = false
-    }
-  }
+  }, 300)
 }
 function handleMatchCoverSuccess() {
   mcLoading.value = false
   mcLoadFailed.value = false
   mcLoaded.value = true
+  if (selectedRow.value !== -1) {
+    const release_id = acoustInfoList.value?.[selectedRow.value].release_id
+    mcCache.value[release_id] = mcsUrl.value
+  }
 }
 function handleMatchCoverFailed() {
   mcLoading.value = false
   mcLoadFailed.value = true
   mcLoaded.value = false
-  console.log(mcsLocalUrl.value, mcLoadFailed.value, mcLoaded.value)
+  console.log(mcsUrl.value, mcLoadFailed.value, mcLoaded.value)
 }
 async function handleConfirm() {
   if (selectedRow.value < 0) return
@@ -159,10 +113,14 @@ async function handleConfirm() {
       alert('Cover not loaded!')
       return
     }
-    coverBlob.value = cachedCover.blob
   }
-  emits('confirm', {...acoustInfoList.value?.[selectedRow.value], cover_blob: coverBlob.value})
+  emits('confirm', {...acoustInfoList.value?.[selectedRow.value], use_matched_cover: useNewCoverArt.value})
 }
+
+onUnmounted(() => {
+  clearTimeout(debounceTimer)
+  mcCache.value = {}
+})
 </script>
 
 <template>
@@ -205,16 +163,18 @@ async function handleConfirm() {
         </div>
         <div class=" flex-none p-2 bg-amber-50 rounded-sm text-sm text-gray-500">
           <div class=" flex place-content-center w-full aspect-square">
-            <div v-if="!mcsLocalUrl" class=" h-fit text-center">no img</div>
-            <div v-else-if="mcLoading">matching cover...</div>
-            <div v-else-if="mcLoadFailed">match failed</div>
-            <img 
-              v-else
-              :src="mcsLocalUrl" 
-              class=" w-full h-full object-cover"
-              @load="handleMatchCoverSuccess"
-              @error="handleMatchCoverFailed"
-            >
+            <div v-if="mcsUrl" class=" relative">
+              <div v-if="mcLoading" class=" absolute inset-0 flex items-center justify-center">matching cover...</div>
+              <div v-else-if="mcLoadFailed" class=" absolute inset-0 flex items-center justify-center text-red-500">match failed</div>
+              <img 
+                :src="mcsUrl" 
+                class=" w-full h-full object-cover"
+                :class="{' opacity-0': mcLoading||mcLoadFailed}"
+                @load="handleMatchCoverSuccess"
+                @error="handleMatchCoverFailed"
+              >
+            </div>
+            <div v-else class=" h-fit text-center">no img</div>
           </div>
         </div>
       </div>

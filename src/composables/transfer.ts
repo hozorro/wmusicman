@@ -9,6 +9,7 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
         id: item.id,
         path: item.path,
         cover: item.cover,
+        use_matched_cover: item.use_matched_cover,
         encoding: item.encoding,
         version: item.version,
         ver_activate: item.ver_activate,
@@ -63,7 +64,7 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
   }
 
   const getUniformTagValue = (field: Exclude<keyof MetaPrimary, 'artists' | 'genres'>, selected: string[]) => {
-    return getUniformFieldValueSingle<Omit<FileInfo, 'cover'>, Exclude<keyof FileInfo, 'cover'>> (
+    return getUniformFieldValueSingle<Omit<FileInfo, 'cover' | 'use_matched_cover'>, Exclude<keyof FileInfo, 'cover' | 'use_matched_cover'>> (
       fileList.value,
       field,
       selected,
@@ -152,8 +153,9 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
           acoustid_id: info.acoustid_id || sessionFiles.value[i].meta_additional.acoustid_id
         }
         sessionFiles.value[i].meta_additional = additional
-        if (info.cover_blob) {
-          sessionFiles.value[i].cover = info.cover_blob
+        if (info.use_matched_cover) {
+          sessionFiles.value[i].use_matched_cover = true
+          sessionFiles.value[i].meta_additional.cover_art_hash = `matched_${info.release_id}`
         }
         sessionFiles.value[i].is_modified = true
       }
@@ -162,19 +164,19 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
   async function updateMetas(session_id: string, selected: string[]) {
     const items = fileList.value.reduce((acc: FileInfoMeta[], cur) => { 
       if (selected.includes(cur.id)) {
-        const { path, ver_activate, encoding, version, ...item } = cur
+        const { path, ver_activate, encoding, version, cover, ...item } = cur
         acc.push(item)
       }
       return acc
     }, [])
-    const formData = new FormData()
-    formData.append('batch_count', items.length.toString())
-    items.forEach(item => {
-      const { cover, ...metaWithoutCover } = item
-      formData.append(`meta_${item.id}`, JSON.stringify(metaWithoutCover))
-      if (cover && typeof cover !== 'string') formData.append(`cover_${item.id}`, cover, `cover_${item.id}.jpg`)
-    })
-    const res = await updateMetaTags(session_id, formData)
+    // const formData = new FormData()
+    // formData.append('batch_count', items.length.toString())
+    // items.forEach(item => {
+    //   const { cover, ...metaWithoutCover } = item
+    //   formData.append(`meta_${item.id}`, JSON.stringify(metaWithoutCover))
+    //   if (cover && typeof cover !== 'string') formData.append(`cover_${item.id}`, cover, `cover_${item.id}.jpg`)
+    // })
+    const res = await updateMetaTags(session_id, items)
     if (res) return res.count
   }
 

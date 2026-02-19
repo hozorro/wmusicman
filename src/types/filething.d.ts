@@ -31,7 +31,7 @@ declare interface MetaAddtional {
 declare interface SongInfo extends MetaPrimary {
   path: string;
   session: string;
-  cover?: string | Blob;
+  cover?: string;
 }
 
 declare interface SessionFile {
@@ -45,21 +45,22 @@ declare interface SessionFile {
   meta_additional: MetaAddtional;
   version: string[];
   is_modified: boolean;
-  cover?: string | Blob;
+  cover?: string;
+  use_matched_cover?: boolean;
 }
 
-type SessionFileBasic = Pick<SessionFile, 'id' | 'ver_activate' | 'path' | 'encoding' | 'version' | 'cover'>
+type SessionFileBasic = Pick<SessionFile, 'id' | 'ver_activate' | 'path' | 'encoding' | 'version' | 'cover' | 'use_matched_cover'>
 
 declare type FileInfo = SessionFileBasic & MetaPrimary & MetaAddtional
-declare type FileInfoMeta = Pick<FileInfo, 'id' | 'cover' | keyof MetaPrimary | keyof MetaAddtional>
+declare type FileInfoMeta = Pick<FileInfo, 'id' | 'use_matched_cover' | keyof MetaPrimary | keyof MetaAddtional>
 
 declare interface AcoustArtist { 
-  id: str
-  name: str
+  id: string
+  name: string
 }
 
 declare interface AcoustInfo {
-  acoustid_id: str
+  acoustid_id: string
   id: string // recording id
   title: string
   duration: number
@@ -73,7 +74,7 @@ declare interface AcoustInfo {
   score: number
 }
 declare interface MatchResult extends AcoustInfo { 
-  cover_blob: Blob
+  use_matched_cover: boolean
 }
 
 declare interface Fingerprint {

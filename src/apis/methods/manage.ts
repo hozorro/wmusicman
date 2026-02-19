@@ -115,8 +115,14 @@ export const matchFingerprint = (duration: number, fingerprint: string) => {
 export const updateMetaVersion = (session_id: string, items: {id: string, use_apev2: boolean}[]) => { 
   return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/updateversion`, {items}, {name: 'update-meta-version'});
 }
-export const updateMetaTags = (session_id: string, formData: FormData) => { 
-  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/updatemetadatas`, formData, {name: 'update-meta-tags'});
+export const updateMetaTags = (session_id: string, items: FileInfoMeta[]) => { 
+  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/updatemetatags`, 
+    {
+      batch_count: items.length,
+      items
+    }, 
+    {name: 'update-meta-tags'}
+  );
 }
 // export const updateFieldTag = (items: string[], field: keyof TrackFile, value: string) => { 
 //   return generalAlova.Post<ResponseData<string>>("/updatefieldtag", {items, field, value});

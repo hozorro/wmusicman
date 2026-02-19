@@ -271,7 +271,7 @@ async function handleTransfer(lang: 'CN' | 'FR') {
           <div class=" inline-block text-xs">
             <span 
               class=" border border-sky-500 rounded-xs px-1 mr-1 text-sky-500"
-              :class="scope.row.cover_art_hash ? ' bg-sky-200' : ''"
+              :class="scope.row.cover_art_hash ? (scope.row.cover_art_hash.startsWith('matched_') ? ' bg-yellow-200' : ' bg-sky-200') : ''"
               :title="scope.row.cover_art_hash">CA</span>
             <span 
               class=" border border-fuchsia-500 rounded-xs px-1 mr-1 text-fuchsia-500"
