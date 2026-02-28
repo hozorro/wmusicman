@@ -11,6 +11,7 @@ export default defineConfig({
     vue(),
     tailwindcss(),
   ],
+  base: '/admin/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
