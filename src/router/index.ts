@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/store/auth";
 
+const appType = import.meta.env.VITE_APP_TYPE || null
+const basePath = appType === 'admin' ? '/admin/' : ''
+
 const routes: RouteRecordRaw[] = [
   { path: "/", 
     component: () => import("@/layout/Main.vue"),
@@ -40,9 +43,9 @@ const router = createRouter({
 
 router.beforeEach(async (to, _, next) => { 
   const authStore = useAuthStore()
-  if(to.path === '/login' || to.path === '/register') {
-    if (to.path === '/login' && authStore.isAuthenticated) {
-      return next('/')
+  if(to.path === basePath + '/login' || to.path === basePath + '/register') {
+    if (to.path === basePath + '/login' && authStore.isAuthenticated) {
+      return next(basePath + '/')
     }
     return next()
   }
@@ -50,7 +53,7 @@ router.beforeEach(async (to, _, next) => {
     const refreshed = await authStore.refresh()
     if(!refreshed) {
       return next({
-        path: '/login',
+        path: basePath + '/login',
         query: { redirect: to.fullPath }
       })
     }
