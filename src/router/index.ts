@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
-import { checkInitialized } from "@/apis/methods/manage";
+import { useAuthStore } from "@/store/auth";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", 
@@ -14,7 +14,7 @@ const routes: RouteRecordRaw[] = [
       { path: "/playlist", name: "playlist", component: () => import("@/views/Playlist.vue") },
       { path: "/backup", name: "backup", component: () => import("@/views/Backup.vue") },
       { path: "/log", name: "log", component: () => import("@/views/Log.vue") },
-      { path: "/log", name: "settings", component: () => import("@/views/Settings.vue") },
+      { path: "/settings", name: "settings", component: () => import("@/views/Settings.vue") },
       { path: "/help", name: "help", component: () => import("@/views/Help.vue")},
       { 
         path: "/tool", 
@@ -28,54 +28,33 @@ const routes: RouteRecordRaw[] = [
       },
     ]
   },
-  { path: "/login", name: "Login", component: () => import("@/views/Login.vue") },
-  { path: "/register", name: "Register", component: () => import("@/views/Register.vue") },
+  { path: "/login", name: "login", component: () => import("@/views/Login.vue") },
+  { path: "/register", name: "register", component: () => import("@/views/Register.vue") },
   { path: "/:catchAll(.*)", name: "404", component: () => import("@/views/NotFound.vue") }
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/admin/'),
   routes,
 });
 
-let initializedChecked = false;
-
 router.beforeEach(async (to, _, next) => { 
+  const authStore = useAuthStore()
   if(to.path === '/login' || to.path === '/register') {
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      return next('/')
+    }
     return next()
   }
-  if (!initializedChecked) {
-    try {
-      const res = await checkInitialized()
-      const initialized = res.initialized
-      if (!initialized) {
-        if(to.path !== '/register') {
-          return next('/register')
-        }
-      } else {
-        initializedChecked = true
-      }
-    } catch (error) {
-      console.log(error)
-      alert('检查初始化状态时发生错误，请稍后再试')
-    } finally {
-      initializedChecked = true
+  if (!authStore.isAuthenticated) {
+    const refreshed = await authStore.refresh()
+    if(!refreshed) {
+      return next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
     }
   }
-  const token = localStorage.getItem("token");
-  const refresh_token = localStorage.getItem("refresh_token");
-  if(!token && !refresh_token) {
-    return next('/login')
-  }
-  // if(token) {
-  //   try {
-  //     await getCurrentUser()
-  //     return next()
-  //   } catch (error) {
-  //     localStorage.removeItem("token")
-  //     return next('/login')
-  //   }
-  // }
   return next()
 });
 

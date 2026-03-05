@@ -3,14 +3,12 @@ import { createAlova } from "alova";
 import { createServerTokenAuthentication } from "alova/client";
 import VueHook from "alova/vue";
 import { refreshToken } from "@/apis/methods/manage";
+import { TokenStorage } from "@/utils/auth";
 
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<typeof VueHook, typeof axiosRequestAdapter>({
   assignToken: (method) => {
-    if (method.meta?.authRole === "refreshToken") {
-      method.config.headers.Authorization = `Bearer ${localStorage.getItem("refresh_token")}`;
-    } else {
-      method.config.headers.Authorization = `Bearer ${localStorage.getItem("token")}`;
-    }
+    const token = TokenStorage.getAccessToken()
+    method.config.headers.Authorization = `Bearer ${token}`
   },
   refreshTokenOnError: {
     isExpired: (error, method) => {
@@ -19,10 +17,14 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
     },
     handler: async () => {
       try {
-        const {access_token} = await refreshToken();
-        localStorage.setItem("token", access_token);
+        const do_refresh_token = TokenStorage.getRefreshToken()
+        if (!do_refresh_token) throw new Error('refresh_token not found')
+        const { access_token, refresh_token } = await refreshToken(do_refresh_token)
+        TokenStorage.setAccessToken(access_token)
+        TokenStorage.setRefreshToken(refresh_token)
       } catch(error) {
-        location.href = "/login";
+        TokenStorage.clear()
+        location.href = "/admin/login";
         throw error;
       }
     },
@@ -32,8 +34,8 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
   },
   async login(response) {
     const { access_token, refresh_token } = await response.data.data
-    localStorage.setItem("token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
+    TokenStorage.setAccessToken(access_token)
+    TokenStorage.setRefreshToken(refresh_token)
   }
 })
 
@@ -43,7 +45,10 @@ export const generalAlova = createAlova({
   cacheFor: {GET: 1000 * 60 * 5, POST: 0},
   requestAdapter: axiosRequestAdapter(),
   timeout: 1000 * 60 * 10,
-  beforeRequest: onAuthRequired(),
+  beforeRequest: onAuthRequired(method => {
+    method.config.headers['X-Client-Type'] = import.meta.env.VITE_CLIENT_TYPE || 'admin'
+    method.config.headers['X-Device-ID'] = TokenStorage.getDeviceId()
+  }),
   responded: onResponseRefreshToken({
     onSuccess: (response) => {
       console.log(response.data)

@@ -1,18 +1,25 @@
 import { generalAlova } from "@/apis";
+import { TokenStorage } from "@/utils/auth";
 
 // const baseSrcURL = import.meta.env.VITE_BASE_SRC_URL;
 const baseURL = import.meta.env.VITE_BASE_URL;
 
 export const login = (username: string, password: string) => { 
-  const formData = new FormData();
-  formData.append("username", username);
-  formData.append("password", password);
-  const method = generalAlova.Post<{'access_token': string, 'refresh_token': string, 'token_type': string}>("/auth/login", formData);
+  const method = generalAlova.Post<TokenData>('/auth/login', {
+    username,
+    password,
+    device_id: TokenStorage.getDeviceId(),
+  })
   method.meta = { authRole: 'login' }
   return method;
 }
-export const refreshToken = () => {
-  const method = generalAlova.Get<{'access_token': string, 'token_type': string}>('/auth/refresh')
+export const logout = (allDevice: boolean) => { 
+  const method = generalAlova.Post<string>(`/auth/logout${allDevice ? '?all=true' : ''}`);
+  method.meta = { authRole: 'logout' }
+  return method;
+}
+export const refreshToken = (refresh_token: string) => {
+  const method = generalAlova.Post<TokenData>('/auth/refresh', {refresh_token})
   method.meta = { authRole: 'refreshToken' }
   return method;
 }
