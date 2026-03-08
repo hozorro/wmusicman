@@ -125,3 +125,29 @@ export function getUniformFieldValueArray<T extends {[P in keyof T]: string | nu
   }
   return { uniformValue: (first ?? ['']), isDifferent: false }
 }
+
+export async function urlToFile(url: string, filename: string): Promise<File> { 
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new File([blob], filename, { type: blob.type });
+}
+
+export class AssetImageCache {
+  private cache: Map<string, File> = new Map();
+
+  async getImage(assetUrl: string, filename: string): Promise<File | null> {
+    if (this.cache.has(assetUrl)) {
+      return this.cache.get(assetUrl)!;
+    }
+
+    const file = await urlToFile(assetUrl, filename);
+    this.cache.set(assetUrl, file);
+    return file;
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+}
+
+export const assetImageCache = new AssetImageCache();

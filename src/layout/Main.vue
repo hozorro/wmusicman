@@ -5,6 +5,7 @@ import { scanState, type ScanState } from '@/composables/key';
 import { getScanInfo } from '@/apis/methods/manage';
 
 const menuItems = [
+  { label: 'Initialize', to: '/initial'},
   { label: 'Home', to: '/', exact: true },
   { label: 'Upload', to: '/upload' },
   { label: 'Transfer', to: '/transfer' },

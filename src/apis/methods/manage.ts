@@ -32,6 +32,22 @@ export const getCurrentUser = () => {
   return generalAlova.Get("/auth/me");
 }
 
+// #region initial
+export const getInitDirs = () => { 
+  return generalAlova.Get<{name: string, path: string}[]>("/admin/sysinfo/initdirs", { hitSource: ['create-init-dirs'] });
+}
+export const createInitDirs = () => { 
+  return generalAlova.Post("/admin/sysinfo/initdirs", {}, {
+    name: 'create-init-dirs'
+  });
+}
+export const uploadDefautArt = (formData: FormData) => {
+  return generalAlova.Post(`/artwork/default`, formData, { 
+    name: 'upload-default-art',
+  });
+}
+// #endregion
+
 // #region Index
 export const checkInitialized = () => { 
   const method = generalAlova.Get<{'initialized': boolean}>("/system/initialized");
@@ -182,12 +198,20 @@ export const getAlbum = (id: number) => {
   });
 }
 export const uploadArtistArt = (formData: FormData) => {
-  return generalAlova.Post<string>('/admin/edit/uploadartistart', formData, {
-    shareRequest: false
+  return generalAlova.Post('/admin/edit/uploadartistart', formData, {
+    shareRequest: false,
+    transform: (res: {id: number, art_type: string}) => {
+      return baseURL + `artwork/artist/${res.id}?img_cate=${res.art_type}`
+    }
   });
 }
 export const uploadAlbumArt = (formData: FormData) => {
-  return generalAlova.Post<string>('/admin/edit/uploadalbumart', formData);
+  return generalAlova.Post('/admin/edit/uploadalbumart', formData, {
+    shareRequest: false,
+    transform: (res: number) => {
+      return baseURL + `artwork/album/${res}`
+    }
+  });
 }
 export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, value: string | number | string[]) => { 
   return generalAlova.Post<string>("/admin/edit/updatetrackfieldtag", {items, field, value});

@@ -9,6 +9,7 @@ const app = createApp(App)
 
 app.directive('default-src', (el: HTMLImageElement, binding) => {
   const defaultSrc = binding.value
+  if (!defaultSrc) return
   el.onerror =  () => {
     el.src = defaultSrc
     el.onerror = null

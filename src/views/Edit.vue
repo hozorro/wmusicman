@@ -4,16 +4,13 @@ import { useRequest } from "alova/client";
 import { invalidateCache } from "alova";
 import WTable from '@/components/WTable.vue'
 import WColumn from '@/components/WColumn.vue';
-import WImgUpload from "@/components/WImgUpload.vue";
+import WImgUploader from "@/components/WImgUploader.vue";
 import EditValue from "./dialogs/EditValue.vue";
 import EditMulti from "./dialogs/EditMulti.vue";
 import { openDialog } from "@/composables/wdialog";
 import { getArtistChars, getArtists, getArtist, getAlbum, uploadArtistArt, uploadAlbumArt, updateTrackFieldTag } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
-import DefaultFace from "@/assets/imgs/face.jpg";
-import DefaultPortrait from "@/assets/imgs/portrait.jpg";
 import DefaultTrack from "@/assets/imgs/track.jpg";
-import DefaultAlbumArt from "@/assets/imgs/album.jpg";
 
 const artistChar = ref("");
 const showNoPathArtists = ref(false);
@@ -77,20 +74,20 @@ function handleAlbum(id: number){
 const faceSrc = ref('')
 const portraitSrc = ref('')
 
-function handleFaceUploaded(res: string) {
+function handleFaceUploaded(_:any) {
   invalidateCache(getArtist(artist.value.id))
-  alert('修改face成功: ' + res)
+  alert('修改face成功.')
 }
-function handlePortraitUploaded(res: string) { 
+function handlePortraitUploaded(_:any) { 
   invalidateCache(getArtist(artist.value.id))
-  alert('修改portrait成功:' + res)
+  alert('修改portrait成功.')
 }
 
 // handle album art edit
 const albumArtSrc = ref('')
-function handleAlbumArtUploaded(res: string) { 
+function handleAlbumArtUploaded(_:any) { 
   invalidateCache(getAlbum(album.value.id))
-  alert('修改album art成功:' + res)
+  alert('修改album art成功.')
 }
 
 // handle track tag edit
@@ -180,21 +177,21 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
         </div>
       </div>
       <div class=" flex-none flex mt-2">
-        <WImgUpload 
-          class=" flex-none w-32 aspect-square"
-          :initial-src="faceSrc"
-          :default-src="DefaultFace"
+        <WImgUploader 
+          container-class=" flex-none w-32 aspect-square"
+          v-model="faceSrc"
+          :show-progress="true"
           :upload-method="uploadArtistArt"
-          :method-options="{id: artist.id, art_type: 'face'}"
-          @uploaded="handleFaceUploaded"
+          :upload-params="{id: artist.id, art_type: 'face'}"
+          @change="handleFaceUploaded"
         />
-        <WImgUpload 
+        <WImgUploader 
           class=" flex-1 h-32 ml-4"
-          :initial-src="portraitSrc"
-          :default-src="DefaultPortrait"
+          v-model="portraitSrc"
+          :show-progress="true"
           :upload-method="uploadArtistArt"
           :method-options="{id: artist.id, art_type: 'portrait'}"
-          @uploaded="handlePortraitUploaded"
+          @change="handlePortraitUploaded"
         />
       </div>
     </div>
@@ -208,12 +205,11 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
           </div>
         </div>
         <div class=" flex-none p-2 ml-4 w-48">
-          <WImgUpload 
-            class=" flex-none w-32 aspect-square"
-            :initial-src="albumArtSrc"
-            :default-src="DefaultAlbumArt"
+          <WImgUploader 
+            container-class=" flex-none w-32 aspect-square"
+            v-model="albumArtSrc"
             :upload-method="uploadAlbumArt"
-            :method-options="{id: album.id}"
+            :upload-params="{id: album.id}"
             @uploaded="handleAlbumArtUploaded"
           />
         </div>
