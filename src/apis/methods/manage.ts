@@ -58,16 +58,28 @@ export const getScanInfo = () => {
   return generalAlova.Get<ScanInfo>("/admin/sysinfo/scaninfo");
 }
 export const getServerInfo = () => {
-  return generalAlova.Get<any>("/admin/sysinfo/stats", { hitSource: ['transfer-files'] });
+  return generalAlova.Get<any>("/admin/sysinfo/stats", { 
+    hitSource: [
+      'transfer-files',
+      'start-watcher',
+      'stop-watcher',
+      'startScan',
+      'stopScan'
+    ] 
+  });
 }
 export const initializeMeta = () => { 
   return generalAlova.Post("/admin/sysinfo/initializemeta");
 }
 export const startWatcher = () => { 
-  return generalAlova.Post<string>("/admin/scan/startwatcher");
+  return generalAlova.Post<string>("/admin/scan/startwatcher", {}, {
+    name: 'start-watcher',
+  });
 }
 export const stopWatcher = () => { 
-  return generalAlova.Post<string>("/admin/scan/stopwatcher");
+  return generalAlova.Post<string>("/admin/scan/stopwatcher", {}, {
+    name: 'stop-watcher',
+  });
 }
 // #endregion
 
@@ -258,8 +270,8 @@ export const importUserFavData = (formData: FormData) => {
 export const getScanFolder = () => { 
   return generalAlova.Get<ScanFolder>("/admin/scan/scanfolderinfo");
 }
-export const startScan = () => { 
-  return generalAlova.Post<string>("/admin/scan/start");
+export const startScan = (is_incremental: boolean) => { 
+  return generalAlova.Post<string>("/admin/scan/start", {is_incremental});
 }
 export const stopScan = () => { 
   return generalAlova.Post<string>("/admin/scan/cancel");
@@ -326,8 +338,14 @@ export const exportLogs = (
 // #endregion
 
 // #region tools
+export const getArtistArts = (option: {area: string, char_range: string}) => { 
+  return generalAlova.Post<{name: string, covers: string[]}[]>("/admin/sysinfo/artistarts", {...option});
+}
+export const setArtistArts = (option: {area: string, char_range: string, covers: {name: string, cover: string}[]}) => { 
+  return generalAlova.Post<{exists: string[], created: string[], no_dirs: string[], total: number}>("/admin/sysinfo/setartistarts", {...option});
+}
 export const getOutPlaylist = (plink: string) => { 
-  return generalAlova.Post<ResponseData<OutPlaylist>>("/getoutplaylist", {plink});
+  return generalAlova.Post<OutPlaylist>("/getoutplaylist", {plink});
 }
 export const testPost = (value: string) => { 
   return generalAlova.Post("/admin/sysinfo/test", {text: value}, {

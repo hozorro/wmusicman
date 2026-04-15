@@ -92,7 +92,7 @@ async function handleWatcher() {
 
 <template>
   <div class=" my-2">
-    <button type="button" class=" mr-2 p-2 w-32" @click="refreshServerInfo">刷新服务器信息</button>
+    <button type="button" class=" mr-2 p-2 w-36" @click="refreshServerInfo">刷新服务器信息</button>
     <button type="button" class=" mr-2 p-2 w-36" @click="initializeMetaData">初始化meta数据</button>
   </div>
   <div class=" h-[calc(100svh_-_6rem)] overflow-y-auto block">

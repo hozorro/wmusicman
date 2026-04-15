@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { ref, inject } from 'vue'
 import { useRequest } from 'alova/client'
 import { type ScanState, scanState } from '@/composables/key'
 import { getScanFolder, startScan, stopScan } from '@/apis/methods/manage'
 import dayjs from 'dayjs'
 
+const isIncremental = ref(false)
 const { data: folder } = useRequest(getScanFolder)
 const { scanInfo, initScanState } = inject<ScanState>(scanState) as ScanState
 
@@ -14,7 +15,7 @@ async function handleScan() {
     initScanState()
   } else {
     initScanState()
-    await startScan()
+    await startScan(isIncremental.value)
     scanInfo.value.is_scanning = true
   }
 }
@@ -22,9 +23,12 @@ async function handleScan() {
 
 <template>
   <div class=" my-2">
-    <button type="button" class=" mr-2 p-2 w-36" @click="handleScan">
+    <input type="checkbox" class=" mr-2" v-model="isIncremental" id="incremental" />
+    <label for="incremental">Incremental</label>
+    <button type="button" class=" ml-2 p-2 w-36" @click="handleScan">
       {{ scanInfo.is_scanning ? 'Stop Scanning' : 'Start Scanning' }}
     </button>
+    <span class=" ml-2 text-gray-600 text-sm">When maintaining, <b>Incremental</b> scan suggested to keep entity id consistent with before.</span>
   </div>
   <div class=" my-1 text-xl font-bold">Scan Folders</div>
   <div class=" my-2 p-2 w-full bg-gray-100 rounded-md shadow-md">

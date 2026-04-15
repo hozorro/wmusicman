@@ -23,6 +23,7 @@ console.log(extendList)
 </script>
 
 <template>
+  <div class=" bg-white rounded-md w-full p-2">颜色计算</div>
   <div class=" w-4/5 grid gap-2 grid-cols-8 mx-auto my-4">
     <div v-for="i in 16" class=" rounded-md aspect-[3/1]" :style="`background-color: rgba(${i*8},0,0);`"></div>
   </div>

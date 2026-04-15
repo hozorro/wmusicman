@@ -25,9 +25,11 @@ const routes: RouteRecordRaw[] = [
         name: "tool",
         component: () => import("@/views/Tool.vue"),
         children: [
-          { path: "", name: "tool-index", component: () => import("@/views/tools/TestView.vue")},
+          { path: "", name: "tool-index", component: () => import("@/views/tools/Color.vue")},
           { path: "color", name: "tool-color", component: () => import("@/views/tools/Color.vue") },
-          { path: "test", name: "tool-test", component: () => import("@/views/tools/GetPlaylist.vue") }
+          { path: "getplaylist", name: "tool-getplaylist", component: () => import("@/views/tools/GetPlaylist.vue") },
+          { path: "test", name: "tool-test", component: () => import("@/views/tools/TestView.vue") },
+          { path: "art", name: "tool-art", component: () => import("@/views/tools/ArtistArt.vue") }
         ]
       },
     ]

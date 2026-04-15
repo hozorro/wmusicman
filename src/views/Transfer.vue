@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRequest } from "alova/client";
 import WTable from "@/components/WTable.vue";
 import WColumn from "@/components/WColumn.vue";
+import { useSystemStore } from "@/store/system";
 import { openDialog } from '@/composables/wdialog';
 import Sessions from './dialogs/Sessions.vue';
 import Acoust from "./dialogs/Acoust.vue";
@@ -13,7 +14,7 @@ import TransferOpt from "./dialogs/TransferOpt.vue";
 import { createStageSession, getSessionFiles, addFilesToSession, transferFiles } from "@/apis/methods/manage";
 import { useTransfer } from "@/composables/transfer";
 
-const curSession = ref('');
+const systemStore = useSystemStore()
 const sessionFiles = ref<SessionFile[]>([])
 
 const { 
@@ -40,26 +41,33 @@ const parseMulti = (tag: string[]) => {
   return tag.join(', ')
 }
 
-const { data: fetchedFiles, send: loadSessionFiles } = useRequest((session) => getSessionFiles(session), { immediate: false }
+const { data: fetchedFiles, send: loadSessionFiles } = useRequest(
+  (session) => getSessionFiles(session), 
+  { immediate: false }
 )
+const refreshSessionFiles = async () => {
+  await loadSessionFiles(systemStore.curSession)
+  sessionFiles.value = [...fetchedFiles.value]
+}
 const selectSession = async () => {
   const result = await openDialog<string>(Sessions, { title: '选择会话' })
   if (result) {
-    curSession.value = result
-    await loadSessionFiles(result)
-    sessionFiles.value = [...fetchedFiles.value]
+    systemStore.curSession = result
+    await refreshSessionFiles()
   }
 }
 const createSession = async () => {
   let res = await createStageSession()
-  curSession.value = res.session_id
+  systemStore.curSession = res.session_id
   sessionFiles.value = []
 }
-const { data: addedFiles, loading, error, send: addFiles } = useRequest(() => addFilesToSession(curSession.value), { immediate: false })
+const { data: addedFiles, loading, error, send: addFiles } = useRequest(
+  () => addFilesToSession(systemStore.curSession), 
+  { immediate: false }
+)
 const addFilesToCurSession = async () => {
-  if(curSession.value) {
+  if(systemStore.curSession) {
     await addFiles()
-    console.log(addedFiles.value)
     if (addedFiles.value && addedFiles.value.length) {
       sessionFiles.value.push(...addedFiles.value)
     } else {
@@ -86,10 +94,10 @@ async function handleUpdateVersion() {
   } else {
     selected = rowSelected.value
   }
-  const res = await updateVersion(curSession.value, selected)
+  const res = await updateVersion(systemStore.curSession, selected)
   if (res) {
     alert('升级成功')
-    loadSessionFiles(curSession.value)
+    await refreshSessionFiles()
   }
 }
 async function handleModifyMeta() {
@@ -115,7 +123,7 @@ async function handleSaveMeta() {
     alert('请选择要保存的文件')
     return
   }
-  const res = await updateMetas(curSession.value, rowSelected.value)
+  const res = await updateMetas(systemStore.curSession, rowSelected.value)
   if (res) {
     alert('保存成功')
   }
@@ -172,7 +180,7 @@ async function handleMatch(id: string) {
       genres: f.genres,
       year: f.year,
       path: f.path,
-      session: curSession.value,
+      session: systemStore.curSession,
       cover: f.cover
     }
     const result = await openDialog<MatchResult | null>(Acoust, { title: '匹配歌曲', contentProps: props })
@@ -196,9 +204,16 @@ async function handleTransfer(lang: 'CN' | 'FR') {
   }, [])
   const result = await openDialog<string>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
   if (result != null) {
-    await transferFiles(rowSelected.value, lang, curSession.value, result)
+    const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, result)
+    if (count) await refreshSessionFiles()
   }
 }
+
+onMounted(() => {
+  if (systemStore.curSession) {
+    refreshSessionFiles()
+  }
+})
 </script>
 
 <template>
@@ -213,7 +228,7 @@ async function handleTransfer(lang: 'CN' | 'FR') {
     <button type="button" class=" mr-2" @click="handleTransfer('FR')">转移至FR</button>
   </div>
   <div class=" w-full my-1 p-2 rounded bg-gray-200">
-    当前会话：<span>{{ curSession }}</span><span v-if="error" class=" text-red-500 ml-4">{{ error.message }}</span>
+    当前会话：<span>{{ systemStore.curSession }}</span><span v-if="error" class=" text-red-500 ml-4">{{ error.message }}</span>
   </div>
   <div class=" h-[calc(100svh_-_8rem)] overflow-y-auto">
     <WTable :data="fileList">

@@ -3,10 +3,11 @@ import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { scanState, type ScanState } from '@/composables/key';
 import { getScanInfo } from '@/apis/methods/manage';
+import { TokenStorage } from '@/utils/auth';
 
 const menuItems = [
   { label: 'Initialize', to: '/initial'},
-  { label: 'Home', to: '/', exact: true },
+  { label: 'Dashboard', to: '/', exact: true },
   { label: 'Upload', to: '/upload' },
   { label: 'Transfer', to: '/transfer' },
   { label: 'Edit Info', to: '/edit' },
@@ -47,9 +48,10 @@ onUnmounted(() => {
 watch(() => scanInfo.value.is_scanning, (val) => { 
   if(val) {
     if(evtSrc == null) {
+      const token = TokenStorage.getAccessToken()
       evtSrc = new EventSourcePolyfill(`${baseURL}admin/scan/progress`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       })
     }

@@ -31,5 +31,15 @@ export const useSystemStore = defineStore("system", () => {
     isInitialized.value = false;
   }
 
-  return { isInitialized, isLoading, checkError, checkInit, setInitialized, reset };
+  const curSession = ref<string>('');
+
+  return { 
+    isInitialized, 
+    isLoading, 
+    checkError, 
+    checkInit, 
+    setInitialized, 
+    reset,
+    curSession
+  };
 });
