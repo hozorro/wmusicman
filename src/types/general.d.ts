@@ -22,3 +22,21 @@ declare interface ScanInfo {
     current_file: string
   }
 }
+
+declare interface ArtworkProgress {
+  phase: string,
+  phase_total: number,
+  phase_processed: number,
+  phase_generated: number,
+  phase_skipped: number,
+  phase_failed: number,
+  total_generated: number,
+  total_skipped: number,
+  total_failed: number,
+  current_item: string
+}
+
+declare interface ArtworkInfo {
+  is_generating: boolean,
+  artwork_progress: ArtworkProgress
+}

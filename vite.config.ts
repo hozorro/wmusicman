@@ -3,29 +3,31 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-const env = loadEnv('development', process.cwd())
-
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    tailwindcss(),
-  ],
-  base: '/admin/',
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 5175,
-    proxy: {
-      '/api': {
-        target: env.VITE_BASE_URL,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd())
+
+  return {
+    plugins: [
+      vue(),
+      tailwindcss(),
+    ],
+    base: '/admin/',
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
       },
     },
-  },
+    server: {
+      host: '0.0.0.0',
+      port: 5175,
+      proxy: {
+        '/api': {
+          target: env.VITE_BASE_URL,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
+    },
+  }
 })

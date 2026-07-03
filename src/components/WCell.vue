@@ -27,10 +27,12 @@ function handleDbClick() {
   }
 }
 function handleBlur() {
-  if (isEditing.value && tmpData.value !== originalData.value) {
-    alert('value changed, enter to confirm')
-  } else {
+  if (isEditing.value) {
     isEditing.value = false
+    if (tmpData.value !== originalData.value) {
+      originalData.value = tmpData.value
+      emits('updateValue', tmpData.value)
+    }
   }
 }
 function handleEnter() {

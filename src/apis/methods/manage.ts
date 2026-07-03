@@ -181,8 +181,8 @@ export const getArtistChars = () => {
     }
   });
 }
-export const getArtists = (achar: string, without_path: boolean = false) => { 
-  return generalAlova.Get<Artist[]>("/admin/edit/getartists/" + achar, {params:{without_path}});
+export const getArtists = (achar: string) => { 
+  return generalAlova.Get<Artist[]>("/admin/edit/getartists/" + achar);
 }
 export const getArtist = (id: number) => { 
   return generalAlova.Get("/admin/edit/artist/" + id, {
@@ -224,6 +224,28 @@ export const uploadAlbumArt = (formData: FormData) => {
       return baseURL + `artwork/album/${res}`
     }
   });
+}
+// 获取 artist 候选图片列表
+export const getArtistArtCandidates = (artist_id: number, art_type: 'face' | 'portrait') => {
+  return generalAlova.Get<{candidates: string[]}>(
+    `/admin/edit/artistartcandidates/${artist_id}`, 
+    { params: { art_type }, shareRequest: false }
+  );
+}
+// 上传候选图片到 artist 目录（自动编号）
+export const uploadArtistArtCandidate = (formData: FormData) => {
+  return generalAlova.Post<{filename: string}>(
+    '/admin/edit/uploadartistartcandidate', 
+    formData, 
+    { shareRequest: false }
+  );
+}
+// 从候选中设置正式 artwork
+export const setArtistArt = (artist_id: number, art_type: 'face' | 'portrait', filename: string) => {
+  return generalAlova.Post<string>(
+    '/admin/edit/setartistart', 
+    { artist_id, art_type, filename }
+  );
 }
 export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, value: string | number | string[]) => { 
   return generalAlova.Post<string>("/admin/edit/updatetrackfieldtag", {items, field, value});
@@ -275,6 +297,15 @@ export const startScan = (is_incremental: boolean) => {
 }
 export const stopScan = () => { 
   return generalAlova.Post<string>("/admin/scan/cancel");
+}
+// #endregion
+
+// #region  Artwork
+export const startArtworkGeneration = (art_types: string[] | null = null) => { 
+  return generalAlova.Post<string>("/admin/artwork/start", { art_types });
+}
+export const cancelArtworkGeneration = () => { 
+  return generalAlova.Post<string>("/admin/artwork/cancel");
 }
 // #endregion
 

@@ -82,7 +82,7 @@ export function get_set<T extends {[P in keyof T]: string | number | undefined},
 
 export function getUniformFieldValueSingle<T extends {[P in keyof T]: string | number | string[] | undefined}, K extends keyof T>(objArray: T[], field: K, selected: (T[K])[], sid: K): any {
   let first = null;
-  for (let i = 1; i < objArray.length; i++) {
+  for (let i = 0; i < objArray.length; i++) {
     if (selected.includes(objArray[i][sid])) {
       if (first === null) first = objArray[i][field];
       if (objArray[i][field] !== first) {
@@ -113,7 +113,7 @@ export function getUniformFieldValueArray<T extends {[P in keyof T]: string | nu
   //   }
   // }
   let first = null
-  for (let i = 1; i < objArray.length; i++) {
+  for (let i = 0; i < objArray.length; i++) {
     if (selected.includes(objArray[i][sid])) {
       const fieldValue = [...(objArray[i][field] as string[])];
       fieldValue.sort((a, b) => a.localeCompare(b));

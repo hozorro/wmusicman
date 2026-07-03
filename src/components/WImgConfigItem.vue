@@ -102,18 +102,17 @@ const handleConfirm = async () => {
     upload.onUpload((progressEvent) => {
       progress.value = Math.round(progressEvent.loaded * 100 / progressEvent.total);
     })
-    upload.then((newUrl: string) => {
-      progress.value = 100;
-      if (internalUrl.value?.startsWith('blob:')) {
-        URL.revokeObjectURL(internalUrl.value);
-      }
-      internalUrl.value = newUrl;
-      emit('update:modelValue', newUrl);
-      emit('saved', newUrl)
+    const newUrl = await upload
+    progress.value = 100;
+    if (internalUrl.value?.startsWith('blob:')) {
+      URL.revokeObjectURL(internalUrl.value);
+    }
+    internalUrl.value = newUrl;
+    emit('update:modelValue', newUrl);
+    emit('saved', newUrl)
 
-      actionType.value = 'none';
-      pendingFile.value = null;
-    })
+    actionType.value = 'none';
+    pendingFile.value = null;
   } catch (error) {
     console.error(error);
     emit('error', error as Error);

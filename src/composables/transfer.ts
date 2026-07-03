@@ -38,7 +38,6 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
 
   async function updateVersion(session_id: string, selected: string[]) {
     const items = sessionFiles.value.reduce((acc: {id: string, use_apev2:boolean}[], cur) => {
-      if (selected.length > 0) {}
       if (selected.includes(cur.path)) {
         let ver = cur.version[cur.ver_activate]
         acc.push({id: cur.id, use_apev2: ver === 'APEv2'})

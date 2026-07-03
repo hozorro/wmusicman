@@ -55,8 +55,8 @@ async function handleScan() {
   <div v-if="scanInfo.is_scanning">
     <div class=" relative mt-2 w-full h-8 bg-gray-300 text-cyan-700 rounded-md">
       <div class=" absolute top-0 left-0 p-1 h-full bg-cyan-300/50 rounded-md overflow-hidden text-center" 
-      :style="{width:`${scanInfo.scan_progress.processed / scanInfo.scan_progress.total * 100}%`}">
-      {{ scanInfo.scan_progress.processed ? (scanInfo.scan_progress.processed / scanInfo.scan_progress.total * 100).toFixed(2) : 0 }}%
+      :style="{width:`${scanInfo.scan_progress.total > 0 ? scanInfo.scan_progress.processed / scanInfo.scan_progress.total * 100 : 0}%`}">
+      {{ scanInfo.scan_progress.total > 0 ? (scanInfo.scan_progress.processed / scanInfo.scan_progress.total * 100).toFixed(2) : 0 }}%
     </div>
     </div>
     <div class=" mt-2 p-2 grid grid-cols-[6rem_1fr]">

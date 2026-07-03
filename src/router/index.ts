@@ -2,9 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/store/auth";
 
-const appType = import.meta.env.VITE_APP_TYPE || null
-const basePath = appType === 'admin' ? '/admin/' : ''
-
 const routes: RouteRecordRaw[] = [
   { path: "/", 
     component: () => import("@/layout/Main.vue"),
@@ -15,6 +12,7 @@ const routes: RouteRecordRaw[] = [
       { path: "/transfer", name: "transfer", component: () => import("@/views/Transfer.vue") },
       { path: "/edit", name: "edit", component: () => import("@/views/Edit.vue") },
       { path: "/scan", name: "scan", component: () => import("@/views/Scan.vue") },
+      { path: "/artwork", name: "artwork", component: () => import("@/views/Artwork.vue") },
       { path: "/playlist", name: "playlist", component: () => import("@/views/Playlist.vue") },
       { path: "/backup", name: "backup", component: () => import("@/views/Backup.vue") },
       { path: "/log", name: "log", component: () => import("@/views/Log.vue") },
@@ -44,24 +42,24 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach(async (to, _, next) => { 
+router.beforeEach(async (to) => { 
   const authStore = useAuthStore()
-  if(to.path === basePath + '/login' || to.path === basePath + '/register') {
-    if (to.path === basePath + '/login' && authStore.isAuthenticated) {
-      return next(basePath + '/')
+  if(to.path === '/login' || to.path === '/register') {
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      return '/'
     }
-    return next()
+    return true
   }
   if (!authStore.isAuthenticated) {
     const refreshed = await authStore.refresh()
     if(!refreshed) {
-      return next({
-        path: basePath + '/login',
+      return {
+        path: '/login',
         query: { redirect: to.fullPath }
-      })
+      }
     }
   }
-  return next()
+  return true
 });
 
 export default router;

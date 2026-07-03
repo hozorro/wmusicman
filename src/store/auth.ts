@@ -72,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
       userInfo.value = null
 
       router.push({
-        path: '/admin/login',
+        path: '/login',
         query: { redirect: router.currentRoute.value.fullPath }
       })
     }

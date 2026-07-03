@@ -126,17 +126,16 @@ const performAutoUpload = async (file: File) => {
       progressAuto.value = Math.round(ProgressEvent.loaded * 100 / ProgressEvent.total);
     })
     
-    upload.then((newUrl:string) => {
-      progressAuto.value = 0;
-      // 更新显示为后端返回的真实 URL (释放本地 ObjectURL 内存)
-      URL.revokeObjectURL(displayUrl.value || '');
-      displayUrl.value = newUrl;
-      
-      // 通知父组件更新 v-model
-      emit('update:modelValue', newUrl);
-      // 通知变更事件
-      emit('change', { file, url: newUrl, mode: 'auto' });
-    })
+    const newUrl = await upload
+    progressAuto.value = 0;
+    // 更新显示为后端返回的真实 URL (释放本地 ObjectURL 内存)
+    URL.revokeObjectURL(displayUrl.value || '');
+    displayUrl.value = newUrl;
+    
+    // 通知父组件更新 v-model
+    emit('update:modelValue', newUrl);
+    // 通知变更事件
+    emit('change', { file, url: newUrl, mode: 'auto' });
   } catch (error) {
     console.error('Upload failed', error);
     alert('上传失败，请重试');

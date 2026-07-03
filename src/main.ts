@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { scanState, scanInfo, updateScanInfo, initScanState } from '@/composables/key'
+import { scanState, scanInfo, updateScanInfo, initScanState, artworkState, artworkInfo, updateArtworkInfo, initArtworkState } from '@/composables/key'
 import './style.css'
 import App from './App.vue'
 import router from './router'
@@ -16,6 +16,7 @@ app.directive('default-src', (el: HTMLImageElement, binding) => {
   }
 })
 app.provide(scanState, { scanInfo, updateScanInfo, initScanState })
+app.provide(artworkState, { artworkInfo, updateArtworkInfo, initArtworkState })
 
 const pinia = createPinia()
 app.use(router).use(pinia).mount('#app')

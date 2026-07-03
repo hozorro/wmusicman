@@ -9,7 +9,7 @@ const router = useRouter();
 onMounted(async () => {
   await systemStore.checkInit()
   if (!systemStore.isInitialized) {
-    router.push('/admin/register')
+    router.push('/register')
   }
 })
 </script>

@@ -4,6 +4,7 @@ import { createServerTokenAuthentication } from "alova/client";
 import VueHook from "alova/vue";
 import { refreshToken } from "@/apis/methods/manage";
 import { TokenStorage } from "@/utils/auth";
+import router from "@/router";
 
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<typeof VueHook, typeof axiosRequestAdapter>({
   assignToken: (method) => {
@@ -24,7 +25,7 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
         TokenStorage.setRefreshToken(refresh_token)
       } catch(error) {
         TokenStorage.clear()
-        location.href = "/admin/login";
+        router.push('/login');
         throw error;
       }
     },

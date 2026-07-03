@@ -33,11 +33,11 @@ function handleUpload(files: File[]) {
 }
 onSuccess((event) => {
   uploadingCount.value--
-  const data = event.data as ResponseData<{filename: string}>
+  const data = event.data as {filename: string}
   if (uploadQueue.value) {
-    const fileItem = uploadQueue.value.find(item => item.file.name === data.data.filename)
+    const fileItem = uploadQueue.value.find(item => item.file.name === data.filename)
     if (fileItem) {
-      const uploadItem = fileList.value.find(item => item.file.name === data.data.filename)
+      const uploadItem = fileList.value.find(item => item.file.name === data.filename)
       if (uploadItem) {
         removeFiles(uploadItem)
         fileItem.status = 2

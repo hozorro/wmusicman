@@ -21,7 +21,7 @@ const watcher_path = ref('')
 // 扫描状态
 const scanner_progress = computed(() => { 
   if (scanInfo.value.is_scanning) {
-    return `${scanInfo.value.scan_progress.processed} / ${scanInfo.value.scan_progress} (完成/总数)，
+    return `${scanInfo.value.scan_progress.processed} / ${scanInfo.value.scan_progress.total} (完成/总数)，
     ${scanInfo.value.scan_progress.success} / ${scanInfo.value.scan_progress.failed} (成功/失败)`
   }
   return ''

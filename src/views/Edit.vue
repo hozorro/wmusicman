@@ -7,22 +7,22 @@ import WColumn from '@/components/WColumn.vue';
 import WImgUploader from "@/components/WImgUploader.vue";
 import EditValue from "./dialogs/EditValue.vue";
 import EditMulti from "./dialogs/EditMulti.vue";
+import SelectArtistArt from './dialogs/SelectArtistArt.vue';
 import { openDialog } from "@/composables/wdialog";
-import { getArtistChars, getArtists, getArtist, getAlbum, uploadArtistArt, uploadAlbumArt, updateTrackFieldTag } from "@/apis/methods/manage";
+import { getArtistChars, getArtists, getArtist, getAlbum, uploadAlbumArt, updateTrackFieldTag, setArtistArt } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import DefaultTrack from "@/assets/imgs/track.jpg";
 
 const artistChar = ref("");
-const showNoPathArtists = ref(false);
 const {data: artistChars, onSuccess} = useRequest(getArtistChars);
 onSuccess(() => {
   let firstHasArtistChar = artistChars.value.find((charInfo) => charInfo.hasArtist)
   if (firstHasArtistChar) {
     artistChar.value = firstHasArtistChar.charName;
-    getArtistList(artistChar.value, showNoPathArtists.value);
+    getArtistList(artistChar.value);
   }
 });
-const {data: dataArtists, send: getArtistList} = useRequest((achar: string, withNoPah: boolean) => getArtists(achar, withNoPah),{
+const {data: dataArtists, send: getArtistList} = useRequest((achar: string) => getArtists(achar),{
   initialData: [],
   immediate: false
 });
@@ -31,7 +31,7 @@ const {data: artist, send: getArtistInfo} = useRequest((id: number) => getArtist
   immediate: false
 });
 const {data: album, send: getAlbumInfo} = useRequest((id: number) => getAlbum(id),{
-  initialData: {trakcs: [], name: '[专辑]', cover: ''},
+  initialData: {tracks: [], name: '[专辑]', cover: ''},
   immediate: false
 });
 function switchArtists(char: string){
@@ -45,10 +45,7 @@ function switchArtists(char: string){
   albumArtSrc.value = '';
   artistChar.value = char;
   rowSelected.value = []
-  getArtistList(artistChar.value, showNoPathArtists.value);
-}
-const filterArtists = () => {
-  getArtistList(artistChar.value, showNoPathArtists.value);
+  getArtistList(artistChar.value);
 }
 const parseMulti = (tag: string[]) => {
   return tag.join(',')
@@ -61,6 +58,7 @@ function handleArtist(id: number){
   getArtistInfo(id).then((res) => { 
     faceSrc.value = res.face;
     portraitSrc.value = res.portrait;
+    albumArtSrc.value = ''
   });
 }
 function handleAlbum(id: number){
@@ -74,13 +72,28 @@ function handleAlbum(id: number){
 const faceSrc = ref('')
 const portraitSrc = ref('')
 
-function handleFaceUploaded(_:any) {
-  invalidateCache(getArtist(artist.value.id))
-  alert('修改face成功.')
-}
-function handlePortraitUploaded(_:any) { 
-  invalidateCache(getArtist(artist.value.id))
-  alert('修改portrait成功.')
+async function handleSelectArt(artType: 'face' | 'portrait') {
+  const result = await openDialog<string>(SelectArtistArt, {
+    title: `${artist.value.name} - 选择${artType === 'face' ? 'Face' : 'Portrait'}`,
+    contentProps: {
+      artistId: artist.value.id,
+      artistName: artist.value.name,
+      artType,
+      currentUrl: artType === 'face' ? faceSrc.value : portraitSrc.value,
+    }
+  })
+  if (result) {
+    const newUrl = await setArtistArt(artist.value.id, artType, result)
+    if (newUrl) {
+      if (artType === 'face') {
+        faceSrc.value = newUrl
+      } else {
+        portraitSrc.value = newUrl
+      }
+      invalidateCache(getArtist(artist.value.id))
+      alert(`修改${artType}成功`)
+    }
+  }
 }
 
 // handle album art edit
@@ -123,7 +136,7 @@ async function handleEditColumn(field: keyof TrackOfAlbum) {
   }
   let result: string[] | string | number | null
   if (field === 'genres' || field === 'artists'){
-    let {uniformValue, isDifferent} = getUniformFieldValueArray(album.value.tracks, 'genres', rowSelected.value, 'id')
+    let {uniformValue, isDifferent} = getUniformFieldValueArray(album.value.tracks, field, rowSelected.value, 'id')
     result = await openDialog<string[]>(EditMulti, { title: '修改genres', contentProps: { multiValue: uniformValue, isDifferent } })
   } else {
     let {uniformValue, isDifferent} = getUniformFieldValueSingle(album.value.tracks, field, rowSelected.value, 'id')
@@ -168,31 +181,22 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
           </div>
         </template>
       </div>
-      <div class=" flex-none mt-2">
-        <input type="checkbox" v-model="showNoPathArtists" @change="filterArtists">过滤无Path歌手</input>
-      </div>
       <div class=" flex-1 mt-2 overflow-y-auto">
         <div class=" w-full p-2 overflow-y-auto bg-white rounded-lg divide-y divide-gray-100">
           <div :class="{'bg-cyan-100': ar.name == artist.name}" v-for="ar in dataArtists" class=" p-1 cursor-pointer" @click="handleArtist(ar.id)">{{ ar.name }}</div>
         </div>
       </div>
       <div class=" flex-none flex mt-2">
-        <WImgUploader 
-          container-class=" flex-none w-32 aspect-square"
-          v-model="faceSrc"
-          :show-progress="true"
-          :upload-method="uploadArtistArt"
-          :upload-params="{id: artist.id, art_type: 'face'}"
-          @change="handleFaceUploaded"
-        />
-        <WImgUploader 
-          class=" flex-1 h-32 ml-4"
-          v-model="portraitSrc"
-          :show-progress="true"
-          :upload-method="uploadArtistArt"
-          :method-options="{id: artist.id, art_type: 'portrait'}"
-          @change="handlePortraitUploaded"
-        />
+        <!-- Face: 点击弹出候选选择窗口 -->
+        <div class="flex-none w-32 cursor-pointer" @click="handleSelectArt('face')">
+          <img v-show="faceSrc" :src="faceSrc" class="w-32 h-32 object-cover rounded-md border border-gray-200" />
+          <div class="text-xs text-center mt-1 text-gray-500">Face</div>
+        </div>
+        <!-- Portrait: 点击弹出候选选择窗口 -->
+        <div class="flex-1 h-32 ml-4 cursor-pointer" @click="handleSelectArt('portrait')">
+          <img v-show="portraitSrc" :src="portraitSrc" class="w-full h-full object-cover rounded-md border border-gray-200" />
+          <div class="text-xs text-center mt-1 text-gray-500">Portrait</div>
+        </div>
       </div>
     </div>
     <div class=" flex-1 flex flex-col h-full ml-2 p-2 bg-white rounded-lg">
