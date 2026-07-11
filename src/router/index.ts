@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/store/auth";
+import axios from "axios";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", 
@@ -42,6 +43,17 @@ const router = createRouter({
   routes,
 });
 
+// Use raw axios to check initialization status without Alova's auth interceptor.
+// This avoids 401 → refresh → redirect loops.
+async function isSystemInitialized(): Promise<boolean> {
+  try {
+    const res = await axios.get('/api/system/initialized')
+    return res.data?.data?.initialized === true
+  } catch {
+    return false
+  }
+}
+
 router.beforeEach(async (to) => { 
   const authStore = useAuthStore()
   if(to.path === '/login' || to.path === '/register') {
@@ -53,6 +65,12 @@ router.beforeEach(async (to) => {
   if (!authStore.isAuthenticated) {
     const refreshed = await authStore.refresh()
     if(!refreshed) {
+      // Before redirecting to /login, check if the system is initialized.
+      // If not, redirect to /register so the first user can be created.
+      const initialized = await isSystemInitialized()
+      if (!initialized) {
+        return { path: '/register' }
+      }
       return {
         path: '/login',
         query: { redirect: to.fullPath }

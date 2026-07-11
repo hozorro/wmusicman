@@ -8,7 +8,8 @@ const router = useRouter();
 
 onMounted(async () => {
   await systemStore.checkInit()
-  if (!systemStore.isInitialized) {
+  if (!systemStore.isInitialized && !systemStore.checkError) {
+    // System not initialized and check succeeded → go to register
     router.push('/register')
   }
 })

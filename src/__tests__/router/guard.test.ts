@@ -14,8 +14,11 @@ vi.mock('@/apis/methods/manage', () => ({
 // Create stub components
 const StubComponent = { template: '<div>stub</div>' }
 
-// Helper to create a test router with the same guard logic
-function createTestRouter(authStore: { isAuthenticated: boolean; refresh: () => Promise<boolean> }) {
+// Helper to create a test router with the same guard logic as router/index.ts
+function createTestRouter(
+  authStore: { isAuthenticated: boolean; refresh: () => Promise<boolean> },
+  systemInitialized: boolean = true
+) {
   const routes: RouteRecordRaw[] = [
     { path: '/', component: StubComponent },
     { path: '/login', name: 'login', component: StubComponent },
@@ -28,6 +31,7 @@ function createTestRouter(authStore: { isAuthenticated: boolean; refresh: () => 
     routes,
   })
 
+  // Mirror the guard logic from router/index.ts
   router.beforeEach(async (to) => {
     if (to.path === '/login' || to.path === '/register') {
       if (to.path === '/login' && authStore.isAuthenticated) {
@@ -38,6 +42,10 @@ function createTestRouter(authStore: { isAuthenticated: boolean; refresh: () => 
     if (!authStore.isAuthenticated) {
       const refreshed = await authStore.refresh()
       if (!refreshed) {
+        // Check initialization status before redirecting
+        if (!systemInitialized) {
+          return { path: '/register' }
+        }
         return {
           path: '/login',
           query: { redirect: to.fullPath }
@@ -59,6 +67,7 @@ describe('Router Guard', () => {
       isAuthenticated: false,
       refresh: vi.fn()
     }
+    vi.clearAllMocks()
   })
 
   it('should allow authenticated user to access protected page', async () => {
@@ -101,16 +110,27 @@ describe('Router Guard', () => {
     expect(router.currentRoute.value.path).toBe('/')
   })
 
-  it('should redirect unauthenticated user to login when refresh fails', async () => {
+  it('should redirect to login when refresh fails and system is initialized', async () => {
     authStore.isAuthenticated = false
     vi.mocked(authStore.refresh).mockResolvedValueOnce(false)
-    const router = createTestRouter(authStore)
+    const router = createTestRouter(authStore, true) // system IS initialized
 
     await router.push('/protected')
     await router.isReady()
 
     expect(router.currentRoute.value.path).toBe('/login')
     expect(router.currentRoute.value.query.redirect).toBe('/protected')
+  })
+
+  it('should redirect to register when refresh fails and system is NOT initialized', async () => {
+    authStore.isAuthenticated = false
+    vi.mocked(authStore.refresh).mockResolvedValueOnce(false)
+    const router = createTestRouter(authStore, false) // system NOT initialized
+
+    await router.push('/protected')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/register')
   })
 
   it('should allow access when refresh succeeds', async () => {
@@ -127,7 +147,7 @@ describe('Router Guard', () => {
   it('should preserve redirect query with full path', async () => {
     authStore.isAuthenticated = false
     vi.mocked(authStore.refresh).mockResolvedValueOnce(false)
-    const router = createTestRouter(authStore)
+    const router = createTestRouter(authStore, true) // system IS initialized
 
     await router.push('/protected?foo=bar')
     await router.isReady()
