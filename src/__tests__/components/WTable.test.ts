@@ -1,62 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import WTable from '@/components/WTable.vue'
 import WColumn from '@/components/WColumn.vue'
-
-// Helper to mount WTable with WColumn children
-function mountTable(options: {
-  data?: any[]
-  columns?: Array<{
-    label?: string
-    prop?: string
-    width?: string
-    rowSelectable?: boolean
-    columnEditable?: boolean
-    cellEditable?: 'direct' | 'dialog'
-    sortable?: boolean
-    align?: 'left' | 'center' | 'right'
-    transform?: (value: any) => any
-  }>
-  rowSelected?: any[]
-  allSelected?: boolean
-} = {}) {
-  const {
-    data = [],
-    columns = [],
-    rowSelected = [],
-    allSelected = false
-  } = options
-
-  return mount(WTable, {
-    props: { data },
-    slots: {
-      default: columns.map(col => {
-        return {
-          components: { WColumn },
-          template: `<WColumn 
-            ${col.label ? `label="${col.label}"` : ''} 
-            ${col.prop ? `:prop="'${col.prop}'"` : ''}
-            ${col.width ? `width="${col.width}"` : ''}
-            ${col.rowSelectable ? ':row-selectable="true"' : ''}
-            ${col.columnEditable ? ':column-editable="true"' : ''}
-            ${col.cellEditable ? `:cell-editable="'${col.cellEditable}'"` : ''}
-            ${col.sortable ? ':sortable="true"' : ''}
-            ${col.align ? `align="${col.align}"` : ''}
-          />`
-        }
-      })
-    },
-    global: {
-      stubs: {
-        WCell: {
-          template: '<div class="w-cell-stub">{{ cellData }}</div>',
-          props: ['cellData', 'editAction', 'align']
-        }
-      }
-    }
-  })
-}
 
 describe('WTable', () => {
   describe('basic rendering', () => {
