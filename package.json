@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@alova/adapter-axios": "^2.0.16",
@@ -24,9 +26,12 @@
     "@types/event-source-polyfill": "^1.0.5",
     "@types/node": "^24.0.3",
     "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.7.0",
+    "happy-dom": "^20.10.6",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
+    "vitest": "^4.1.10",
     "vue-tsc": "^2.2.8"
   }
 }
