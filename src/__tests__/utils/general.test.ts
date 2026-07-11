@@ -250,25 +250,25 @@ describe('AssetImageCache', () => {
   beforeEach(() => {
     cache = new AssetImageCache()
     // Mock global fetch
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
   })
 
   it('should fetch and cache image on first call', async () => {
     const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
-    vi.mocked(global.fetch).mockResolvedValueOnce({
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       blob: () => Promise.resolve(mockBlob)
     } as Response)
 
     const result = await cache.getImage('http://example.com/img.jpg', 'img.jpg')
     
-    expect(global.fetch).toHaveBeenCalledTimes(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
     expect(result).toBeInstanceOf(File)
     expect(result?.name).toBe('img.jpg')
   })
 
   it('should return cached image on subsequent calls', async () => {
     const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
-    vi.mocked(global.fetch).mockResolvedValueOnce({
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       blob: () => Promise.resolve(mockBlob)
     } as Response)
 
@@ -277,13 +277,13 @@ describe('AssetImageCache', () => {
     // Second call - should use cache
     const result = await cache.getImage('http://example.com/img.jpg', 'img.jpg')
     
-    expect(global.fetch).toHaveBeenCalledTimes(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
     expect(result).toBeInstanceOf(File)
   })
 
   it('should clear cache', async () => {
     const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
-    vi.mocked(global.fetch).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       blob: () => Promise.resolve(mockBlob)
     } as Response)
 
@@ -291,6 +291,6 @@ describe('AssetImageCache', () => {
     cache.clear()
     await cache.getImage('http://example.com/img.jpg', 'img.jpg')
     
-    expect(global.fetch).toHaveBeenCalledTimes(2)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
   })
 })

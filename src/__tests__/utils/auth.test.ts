@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { TokenStorage } from '@/utils/auth'
 
 // The TOKEN_PREFIX defaults to 'admin_' when VITE_TOKEN_PREFIX is not set
