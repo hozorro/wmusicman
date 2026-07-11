@@ -88,9 +88,9 @@ describe('Auth Store', () => {
 
     it('should set isLogining during login', async () => {
       let loginResolve: (value: any) => void
-      vi.mocked(loginApi).mockImplementationOnce(() => 
+      vi.mocked(loginApi).mockImplementationOnce((() => 
         new Promise(resolve => { loginResolve = resolve })
-      )
+      ) as any)
 
       const store = useAuthStore()
       const loginPromise = store.login('user', 'pass')

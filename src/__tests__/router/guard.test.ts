@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { setActivePinia, createPinia } from 'pinia'
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 
 // Mock API methods
 vi.mock('@/apis/methods/manage', () => ({
