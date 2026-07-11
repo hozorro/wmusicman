@@ -40,12 +40,13 @@ async function handleGenerate() {
   }
 }
 
-// When SSE updates is_generating to false (natural completion), save the final progress
-watch(() => artworkInfo.value.is_generating, (newVal, oldVal) => {
-  if (oldVal === true && newVal === false) {
-    lastProgress.value = { ...artworkInfo.value.artwork_progress }
+// Continuously save progress whenever it contains meaningful data.
+// This ensures lastProgress always holds the latest stats before backend resets.
+watch(() => artworkInfo.value.artwork_progress, (p) => {
+  if (p && (p.total_generated > 0 || p.total_skipped > 0 || p.total_failed > 0 || p.phase_total > 0)) {
+    lastProgress.value = { ...p }
   }
-})
+}, { deep: true })
 
 // Progress calculations
 const phaseProgress = computed(() => {

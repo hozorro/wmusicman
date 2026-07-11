@@ -29,5 +29,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    test: {
+      environment: 'happy-dom',
+      globals: true,
+    },
   }
 })

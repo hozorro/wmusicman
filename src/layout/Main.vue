@@ -103,7 +103,13 @@ watch(() => artworkInfo.value.is_generating, (val) => {
     }
     artworkEvtSrc.onmessage = (e) => { 
       const data = JSON.parse(e.data) as ArtworkInfo
-      updateArtworkInfo(data)
+      // When generation finishes, backend may send artwork_progress as null.
+      // In that case, only update is_generating and preserve the last valid progress data.
+      if (data.artwork_progress == null) {
+        artworkInfo.value.is_generating = data.is_generating
+      } else {
+        updateArtworkInfo(data)
+      }
       if (data.is_generating == false) { 
         // when artwork generation finished, close the event source connection manually
         console.log('Artwork generation finished.')
