@@ -4,7 +4,6 @@ import { createServerTokenAuthentication } from "alova/client";
 import VueHook from "alova/vue";
 import { refreshToken } from "@/apis/methods/manage";
 import { TokenStorage } from "@/utils/auth";
-import router from "@/router";
 
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<typeof VueHook, typeof axiosRequestAdapter>({
   assignToken: (method) => {
@@ -24,8 +23,9 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
         TokenStorage.setAccessToken(access_token)
         TokenStorage.setRefreshToken(refresh_token)
       } catch(error) {
+        // Only clear tokens, do NOT call router.push here.
+        // The router guard (beforeEach) is solely responsible for auth redirects.
         TokenStorage.clear()
-        router.push('/login');
         throw error;
       }
     },
@@ -57,9 +57,8 @@ export const generalAlova = createAlova({
     },
     onError: (error) => {
       console.log(error)
-      if(error.status === 401) {
-        alert('登录已过期，请重新登录')
-      }else{
+      // Don't show alert for 401 - the router guard handles auth redirect
+      if(error.status !== 401) {
         alert(`错误[${error.status}]: ${error.message}`)
       }
       throw error
