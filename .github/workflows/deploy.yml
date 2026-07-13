@@ -26,6 +26,7 @@ jobs:
           echo "VITE_APP_NAME=WMusicManage" >> .env
           echo "VITE_TOKEN_PREFIX=admin_" >> .env
           echo "VITE_CLIENT_TYPE=admin" >> .env
+          echo "VITE_BASE_URL=/api/" >> .env
 
       - name: Build project
         run: yarn build
