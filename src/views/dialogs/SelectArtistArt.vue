@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef } from 'vue'
+import { ref, computed, onMounted, useTemplateRef, inject } from 'vue'
 import { useRequest } from 'alova/client'
+import { busyState, type BusyState } from '@/composables/busy'
 import { getArtistArtCandidates, uploadArtistArtCandidate } from '@/apis/methods/manage'
+
+// While any global task is running, selection/upload entries are disabled
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 const props = defineProps<{
   artistId: number,
@@ -40,6 +44,7 @@ function handleConfirm() {
 
 // 上传本地图片
 function triggerUpload() {
+  if (busy.value) return
   fileInputRef.value?.click()
 }
 
@@ -78,62 +83,64 @@ async function handleFileChange(event: Event) {
 
 <template>
   <div class="w-[500px]">
-    <div v-if="loading" class="text-center p-4">加载中...</div>
-    <div v-else-if="error" class="text-center p-4 text-red-500">{{ error.message }}</div>
+    <div v-if="loading" class="state-box !py-8">加载中...</div>
+    <div v-else-if="error" class="state-box !py-8"><b>加载失败</b><span class="!text-bad">{{ error.message }}</span></div>
     <div v-else>
       <!-- 候选图片网格 -->
-      <div class="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto p-2">
+      <div class="grid grid-cols-4 gap-2.5 max-h-96 overflow-y-auto p-0.5">
         <div 
           v-for="filename in data?.candidates" 
           :key="filename"
-          class="cursor-pointer rounded-md overflow-hidden border-2 relative"
-          :class="selectedFile === filename ? 'border-cyan-500 ring-2 ring-cyan-300' : 'border-transparent hover:border-gray-300'"
+          class="cursor-pointer rounded-r overflow-hidden border-2 relative transition-all"
+          :class="selectedFile === filename ? 'border-accent ring-2 ring-glow' : 'border-transparent hover:border-line-strong'"
           @click="selectFile(filename)"
         >
           <img 
             :src="getImgUrl(filename)" 
             class="w-full aspect-square object-cover"
           />
-          <div class="text-xs text-center py-1 text-gray-500 truncate">{{ filename }}</div>
+          <div class="text-[11.5px] text-center py-1 text-ink-3 truncate">{{ filename }}</div>
           <!-- 选中标记 -->
-          <div v-if="selectedFile === filename" class="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center">
-            <span class="text-white text-xs">✓</span>
+          <div v-if="selectedFile === filename" class="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+            <svg width="11" height="11" viewBox="0 0 256 256" fill="#fff">
+              <path d="M104,196a12.2,12.2,0,0,1-8.5-3.5l-56-56a12,12,0,0,1,17-17L104,167,207.5,63.5a12,12,0,0,1,17,17l-112,112A12.2,12.2,0,0,1,104,196Z"></path>
+            </svg>
           </div>
         </div>
 
         <!-- 上传区域 -->
         <div 
-          class="cursor-pointer rounded-md border-2 border-dashed border-gray-300 flex flex-col items-center justify-center aspect-square hover:border-cyan-400 hover:bg-cyan-50 transition-colors relative"
-          :class="{ 'opacity-50 pointer-events-none': isUploading }"
+          class="cursor-pointer rounded-r border-2 border-dashed border-line-strong flex flex-col items-center justify-center aspect-square hover:border-accent hover:bg-accent-soft transition-colors relative"
+          :class="{ 'opacity-50 pointer-events-none': isUploading || busy }"
           @click="triggerUpload"
         >
           <div v-if="isUploading" class="absolute inset-0 flex flex-col items-center justify-center">
-            <div class="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-1"></div>
-            <span class="text-xs text-cyan-600">{{ uploadProgress }}%</span>
+            <div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-1"></div>
+            <span class="text-xs text-accent num">{{ uploadProgress }}%</span>
           </div>
           <template v-else>
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <svg width="26" height="26" viewBox="0 0 256 256" fill="currentColor" class="text-ink-3">
+              <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
             </svg>
-            <span class="text-xs text-gray-400 mt-1">上传本地图片</span>
+            <span class="text-xs text-ink-3 mt-1">上传本地图片</span>
           </template>
         </div>
       </div>
 
-      <div v-if="data?.candidates?.length === 0" class="text-center p-4 text-gray-400">
+      <div v-if="data?.candidates?.length === 0" class="text-center py-4 text-ink-3 text-[13px]">
         暂无候选图片，请上传
       </div>
     </div>
 
     <!-- 底部操作栏 -->
-    <div class="mt-3 p-2 text-right border-t border-gray-200">
+    <div class="mt-4 pt-3 flex justify-end gap-2 border-t border-line">
+      <button type="button" class="btn" @click="emits('close')">取消</button>
       <button 
         type="button" 
-        class="h-7 w-28 px-1 mr-2 py-0 disabled:bg-gray-500 disabled:cursor-auto" 
-        :disabled="!selectedFile" 
+        class="btn btn-primary" 
+        :disabled="busy || !selectedFile" 
         @click="handleConfirm"
       >确认选择</button>
-      <button type="button" class="h-7 w-28 px-1 py-0" @click="emits('close')">取消</button>
     </div>
 
     <!-- 隐藏的文件输入 -->

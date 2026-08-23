@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, inject, computed, watch } from 'vue'
 import { type ArtworkState, artworkState } from '@/composables/key'
+import { busyState, type BusyState } from '@/composables/busy'
 import { startArtworkGeneration, cancelArtworkGeneration } from '@/apis/methods/manage'
 
 const { artworkInfo, initArtworkState } = inject<ArtworkState>(artworkState) as ArtworkState
+// While any global task is running, starting generation is disabled
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 // Save final progress info when generation completes
 const lastProgress = ref<ArtworkProgress | null>(null)
@@ -58,116 +61,130 @@ const phaseProgress = computed(() => {
 </script>
 
 <template>
-  <div class="my-2">
-    <div class="mb-4">
-      <div class="text-lg font-bold mb-2">选择要重建的 Artwork 类型</div>
-      <div class="flex gap-4">
-        <label v-for="item in availableArtTypes" :key="item.value" class="flex items-center gap-2 cursor-pointer">
-          <input 
-            type="checkbox" 
-            :checked="artTypes.includes(item.value)" 
+  <div class="flex flex-col gap-4 animate-fade-in">
+    <div class="page-head">
+      <div>
+        <h1>Artwork</h1>
+        <p>重建歌手、专辑与曲目的 Artwork 缓存</p>
+      </div>
+      <div class="sp actions">
+        <button
+          v-if="artworkInfo.is_generating"
+          type="button"
+          class="btn btn-danger"
+          @click="handleGenerate"
+        >Stop Generating</button>
+        <button
+          v-else
+          type="button"
+          class="btn btn-primary"
+          :disabled="busy || artTypes.length === 0"
+          @click="handleGenerate"
+        >Start Generating</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>选择要重建的 Artwork 类型</h2></div>
+      <div class="card-pad flex flex-wrap gap-6">
+        <label v-for="item in availableArtTypes" :key="item.value" class="check">
+          <input
+            type="checkbox"
+            :checked="artTypes.includes(item.value)"
             @change="toggleArtType(item.value)"
-            :disabled="artworkInfo.is_generating"
-            class="w-4 h-4"
+            :disabled="artworkInfo.is_generating || busy"
           />
           <span>{{ item.label }}</span>
         </label>
       </div>
     </div>
-    <button 
-      type="button" 
-      class="p-2 w-40" 
-      :disabled="!artworkInfo.is_generating && artTypes.length === 0"
-      @click="handleGenerate"
-    >
-      {{ artworkInfo.is_generating ? 'Stop Generating' : 'Start Generating' }}
-    </button>
-    <span v-if="artworkInfo.is_generating" class="ml-2 text-gray-600 text-sm">
-      正在重建 artwork 缓存...
-    </span>
-  </div>
-  
-  <hr class="my-2 text-gray-300" />
-  
-  <div class="my-1 text-xl font-bold">Artwork Progress</div>
-  
-  <div v-if="artworkInfo.is_generating">
-    <!-- Phase info -->
-    <div class="mt-2 p-2 bg-blue-50 rounded-md">
-      <div class="text-sm font-medium text-blue-800">
-        当前阶段: <span class="font-bold">{{ artworkInfo.artwork_progress.phase || '准备中...' }}</span>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Artwork Progress</h2>
+        <span class="sp"></span>
+        <span v-if="artworkInfo.is_generating" class="tag tag-cyan animate-soft-pulse">正在重建 artwork 缓存...</span>
       </div>
-    </div>
-    
-    <!-- Phase progress bar -->
-    <div class="relative mt-2 w-full h-8 bg-gray-300 text-cyan-700 rounded-md">
-      <div 
-        class="absolute top-0 left-0 p-1 h-full bg-cyan-300/50 rounded-md overflow-hidden text-center transition-all"
-        :style="{width: `${phaseProgress}%`}"
-      >
-        {{ phaseProgress }}%
-      </div>
-    </div>
-    
-    <!-- Phase stats -->
-    <div class="mt-2 p-2 grid grid-cols-[8rem_1fr] gap-y-1">
-      <div class="font-medium">Phase Total:</div>
-      <div>{{ artworkInfo.artwork_progress.phase_total }}</div>
-      <div class="font-medium">Phase Processed:</div>
-      <div>{{ artworkInfo.artwork_progress.phase_processed }}</div>
-      <div class="font-medium text-green-600">Generated:</div>
-      <div class="text-green-600">{{ artworkInfo.artwork_progress.phase_generated }}</div>
-      <div class="font-medium text-gray-500">Skipped:</div>
-      <div class="text-gray-500">{{ artworkInfo.artwork_progress.phase_skipped }}</div>
-      <div class="font-medium text-red-600">Failed:</div>
-      <div class="text-red-600">{{ artworkInfo.artwork_progress.phase_failed }}</div>
-    </div>
-    
-    <!-- Current item -->
-    <div v-if="artworkInfo.artwork_progress.current_item" class="mt-2 p-2 bg-gray-50 rounded-md text-sm">
-      <span class="font-medium">当前处理:</span> 
-      <span class="text-gray-600">{{ artworkInfo.artwork_progress.current_item }}</span>
-    </div>
-    
-    <!-- Total stats -->
-    <div class="mt-4 p-3 bg-green-50 rounded-md border border-green-200">
-      <div class="font-bold text-green-800 mb-2">总计统计</div>
-      <div class="grid grid-cols-3 gap-4 text-center">
-        <div>
-          <div class="text-2xl font-bold text-green-600">{{ artworkInfo.artwork_progress.total_generated }}</div>
-          <div class="text-sm text-gray-600">Generated</div>
+
+      <div v-if="artworkInfo.is_generating" class="card-pad flex flex-col gap-4">
+        <!-- Phase info -->
+        <div class="text-[13.5px] text-ink-2">
+          当前阶段: <span class="font-semibold text-ink-1">{{ artworkInfo.artwork_progress.phase || '准备中...' }}</span>
         </div>
-        <div>
-          <div class="text-2xl font-bold text-gray-500">{{ artworkInfo.artwork_progress.total_skipped }}</div>
-          <div class="text-sm text-gray-600">Skipped</div>
+
+        <!-- Phase progress bar -->
+        <div class="flex items-center gap-3">
+          <div class="progress progress-lg progress-striped flex-1">
+            <div class="bar" :style="{ width: phaseProgress + '%' }"></div>
+          </div>
+          <span class="w-16 text-right text-[13px] font-semibold text-ink-2 num">{{ phaseProgress }}%</span>
         </div>
-        <div>
-          <div class="text-2xl font-bold text-red-600">{{ artworkInfo.artwork_progress.total_failed }}</div>
-          <div class="text-sm text-gray-600">Failed</div>
+
+        <!-- Phase stats -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+          <div class="kpi">
+            <div class="kpi-k">Phase Total</div>
+            <div class="kpi-v !text-xl">{{ artworkInfo.artwork_progress.phase_total }}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k">Phase Processed</div>
+            <div class="kpi-v !text-xl">{{ artworkInfo.artwork_progress.phase_processed }}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k text-ok-ink">Generated</div>
+            <div class="kpi-v !text-xl text-ok">{{ artworkInfo.artwork_progress.phase_generated }}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k">Skipped</div>
+            <div class="kpi-v !text-xl text-ink-3">{{ artworkInfo.artwork_progress.phase_skipped }}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k text-bad-ink">Failed</div>
+            <div class="kpi-v !text-xl text-bad">{{ artworkInfo.artwork_progress.phase_failed }}</div>
+          </div>
+        </div>
+
+        <!-- Current item -->
+        <div v-if="artworkInfo.artwork_progress.current_item" class="text-[12.5px] text-ink-3 truncate">
+          当前处理: <span class="text-ink-2">{{ artworkInfo.artwork_progress.current_item }}</span>
+        </div>
+
+        <!-- Total stats -->
+        <div class="grid grid-cols-3 gap-3.5 border-t border-line pt-4">
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-ok">{{ artworkInfo.artwork_progress.total_generated }}</div>
+            <div class="kpi-k justify-center mt-1">Generated</div>
+          </div>
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-ink-3">{{ artworkInfo.artwork_progress.total_skipped }}</div>
+            <div class="kpi-k justify-center mt-1">Skipped</div>
+          </div>
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-bad">{{ artworkInfo.artwork_progress.total_failed }}</div>
+            <div class="kpi-k justify-center mt-1">Failed</div>
+          </div>
         </div>
       </div>
+
+      <div v-else-if="lastProgress" class="card-pad">
+        <div class="text-[14px] font-semibold text-ink-1 mb-3">重建完成 - 总计统计</div>
+        <div class="grid grid-cols-3 gap-3.5">
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-ok">{{ lastProgress.total_generated }}</div>
+            <div class="kpi-k justify-center mt-1">Generated</div>
+          </div>
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-ink-3">{{ lastProgress.total_skipped }}</div>
+            <div class="kpi-k justify-center mt-1">Skipped</div>
+          </div>
+          <div class="kpi text-center">
+            <div class="kpi-v justify-center !text-2xl text-bad">{{ lastProgress.total_failed }}</div>
+            <div class="kpi-k justify-center mt-1">Failed</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="state-box !py-10">无重建进度</div>
     </div>
-  </div>
-  
-  <div v-else-if="lastProgress" class="mt-2 p-3 bg-green-50 rounded-md border border-green-200">
-    <div class="font-bold text-green-800 mb-2">重建完成 - 总计统计</div>
-    <div class="grid grid-cols-3 gap-4 text-center">
-      <div>
-        <div class="text-2xl font-bold text-green-600">{{ lastProgress.total_generated }}</div>
-        <div class="text-sm text-gray-600">Generated</div>
-      </div>
-      <div>
-        <div class="text-2xl font-bold text-gray-500">{{ lastProgress.total_skipped }}</div>
-        <div class="text-sm text-gray-600">Skipped</div>
-      </div>
-      <div>
-        <div class="text-2xl font-bold text-red-600">{{ lastProgress.total_failed }}</div>
-        <div class="text-sm text-gray-600">Failed</div>
-      </div>
-    </div>
-  </div>
-  
-  <div v-else class="mt-2 p-4 text-center text-gray-500 bg-gray-50 rounded-md">
-    无重建进度
   </div>
 </template>

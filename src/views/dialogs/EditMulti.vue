@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, useTemplateRef } from 'vue'
+import { ref, computed, nextTick, onMounted, useTemplateRef, inject } from 'vue'
+import { busyState, type BusyState } from '@/composables/busy'
+
+// While any global task is running, submit is disabled (read-only)
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 const {multiValue = [''], isDifferent = false} = defineProps<{
   multiValue: string[],
@@ -55,37 +59,41 @@ const handleConfirm = () => {
 </script>
 
 <template>
-  <div class=" space-y-2" ref="inputsContainer">
-    <div v-for="(_, index) in inputValues" :key="index" class=" flex items-center gap-2 group">
+  <div class="space-y-2" ref="inputsContainer">
+    <div v-for="(_, index) in inputValues" :key="index" class="flex items-center gap-2 group">
       <input 
         type="text"
         v-model="inputValues[index]" 
         :placeholder="isDifferent ? '**多个不同值**' : `请输入第 ${index + 1} 个`" 
-        class="flex-1 p-2 border-b border-gray-300 focus:border-cyan-500 transition-all outline-none text-gray-800"
+        class="input flex-1"
+        :disabled="busy"
         @keydown.enter.prevent="handleAddRow(index)"
         @blur="trimValue(index)"
       />
       <button
         @click="handleAddRow(index)"
-        class="w-8 h-8 mr-2 flex items-center justify-center rounded-full bg-gray-100 opacity-0 group-hover:opacity-100 text-gray-500 hover:bg-cyan-100 hover:text-cyan-600 transition-all"
+        class="btn btn-icon btn-sm opacity-0 group-hover:opacity-100 transition-opacity"
+        :disabled="busy"
+        title="添加一行"
       >
-        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        <svg width="15" height="15" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
         </svg>
       </button>
       <button
         @click="handleRemoveRow(index)"
-        class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 opacity-0 group-hover:opacity-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-all"
-        :disabled="inputValues.length <= 1"
+        class="btn btn-icon btn-sm opacity-0 group-hover:opacity-100 transition-opacity !text-bad"
+        :disabled="busy || inputValues.length <= 1"
+        title="删除此行"
       >
-        <svg class=" w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
         </svg>
       </button>
     </div>
-    <div class=" mt-4 p-1 text-right">
-      <button type="button" class="  h-7 w-28 px-1 mr-2 py-0 disabled:bg-gray-500 disabled:cursor-auto" :disabled="validValues.length==0 || !isModified" @click="handleConfirm">Confirm</button>
-      <button type="button" class="  h-7 w-28 px-1 py-0" @click="emits('close')">Cancel</button>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" class="btn" @click="emits('close')">Cancel</button>
+      <button type="button" class="btn btn-primary" :disabled="busy || validValues.length==0 || !isModified" @click="handleConfirm">Confirm</button>
     </div>
   </div>
 </template>

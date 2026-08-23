@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted, inject } from 'vue'
 import { useRequest } from 'alova/client';
+import { busyState, type BusyState } from '@/composables/busy'
 import { formatTimeDuration } from '@/utils/general'
 import { generateFingerprint, matchFingerprint } from '@/apis/methods/manage'
+
+// While any global task is running, match operations are disabled (read-only)
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 interface PropsSongInfo { // vue limitations, can not use declared interface with extends
   title: string,
@@ -124,102 +128,103 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class=" flex flex-col h-136 w-240">
-    <div class=" flex-none flex border-b border-b-gray-100">
-      <div class=" flex-none w-60 p-1">
-        <div class=" h-6">Original Info</div>
-        <div class=" mt-2 p-2 bg-gray-200 text-sm rounded-md">
-          <div class=" grid grid-cols-[3rem_1fr] gap-2" v-for="(v, k, i) in props_show" :key="i">
-            <div class=" font-bold">{{ k }}:</div>
-            <div class=" break-all">{{ v instanceof Array ? v.join(',') : v }}</div>
+  <div class="flex flex-col h-136 w-240">
+    <div class="flex-none flex gap-3 border-b border-line pb-3">
+      <div class="flex-none w-60">
+        <div class="h-6 text-[13px] font-semibold text-ink-1">Original Info</div>
+        <div class="mt-2 p-2.5 bg-panel border border-line text-[12.5px] rounded-r">
+          <div class="grid grid-cols-[3.5rem_1fr] gap-1.5" v-for="(v, k, i) in props_show" :key="i">
+            <div class="font-semibold text-ink-2">{{ k }}:</div>
+            <div class="break-all text-ink-2">{{ v instanceof Array ? v.join(',') : v }}</div>
           </div>
         </div>
-        <div class=" mt-2 p-2 bg-amber-50 text-sm rounded-md">duration: 
+        <div class="mt-2 p-2.5 bg-warn-soft text-[12.5px] rounded-r text-warn-ink">duration: 
           <span v-if="fp_loading">caculating...</span>
-          <span v-else>{{ duration ? formatTimeDuration(duration) : '--:--' }}</span>
+          <span v-else class="num">{{ duration ? formatTimeDuration(duration) : '--:--' }}</span>
         </div>
-        <div class=" mt-2 p-2 text-center">
-          <button type="button" class="  h-6 w-2/5 px-1 mr-2 py-0 disabled:bg-gray-500 disabled:cursor-auto" :disabled="fp_loading" @click="generateFp">Generate</button>
-          <button type="button" class="  h-6 w-2/5 px-1 py-0 disabled:bg-gray-500 disabled:cursor-auto" :disabled="acoustInfoList_loading || !fp" @click="search">Search</button>
+        <div class="mt-2 flex justify-center gap-2">
+          <button type="button" class="btn btn-sm" :disabled="busy || fp_loading" @click="generateFp">Generate</button>
+          <button type="button" class="btn btn-sm btn-primary" :disabled="busy || acoustInfoList_loading || !fp" @click="search">Search</button>
         </div>
       </div>
-      <div class=" flex-1 flex flex-col p-1 h-78">
-        <div class=" flex-none h-6">Fingerprint</div>
-        <div class=" flex-1 mt-2 p-2 bg-amber-50 text-xs rounded-md break-all overflow-y-scroll">
+      <div class="flex-1 flex flex-col h-78">
+        <div class="flex-none h-6 text-[13px] font-semibold text-ink-1">Fingerprint</div>
+        <div class="flex-1 mt-2 p-2.5 bg-warn-soft text-[11.5px] rounded-r break-all overflow-y-auto text-warn-ink font-mono">
           <span v-if="fp_loading">generating...</span>
           <span v-else>{{ fp }}</span>
         </div>
       </div>
-      <div class=" flex-none flex flex-col gap-2 w-30 p-1">
-        <div class=" flex-none">Cover Art</div>
-        <div class=" flex-1 text-sm text-gray-500">
-          <input type="checkbox" v-model="useNewCoverArt" class="w-4 h-4" />Use matched
+      <div class="flex-none flex flex-col gap-2 w-30">
+        <div class="flex-none text-[13px] font-semibold text-ink-1">Cover Art</div>
+        <div class="flex-none text-[12.5px] text-ink-2">
+          <label class="check"><input type="checkbox" v-model="useNewCoverArt" :disabled="busy" />Use matched</label>
         </div>
-        <div class=" flex-none p-2 bg-gray-200 rounded-sm text-sm text-gray-500">
-          <div class=" flex place-content-center w-full aspect-square">
-            <div v-if="ogLoadFailed" class=" h-fit text-center">no original cover</div>
-            <img v-else :src="props.cover" class=" w-full h-full object-cover" @error="ogLoadFailed=true">
+        <div class="flex-none p-2 bg-panel border border-line rounded-r">
+          <div class="flex place-content-center w-full aspect-square">
+            <div v-if="ogLoadFailed" class="h-fit text-center text-[12px] text-ink-3">no original cover</div>
+            <img v-else :src="props.cover" class="w-full h-full object-cover rounded-r" @error="ogLoadFailed=true">
           </div>
         </div>
-        <div class=" flex-none p-2 bg-amber-50 rounded-sm text-sm text-gray-500">
-          <div class=" flex place-content-center w-full aspect-square">
-            <div v-if="mcsUrl" class=" relative">
-              <div v-if="mcLoading" class=" absolute inset-0 flex items-center justify-center">matching cover...</div>
-              <div v-else-if="mcLoadFailed" class=" absolute inset-0 flex items-center justify-center text-red-500">match failed</div>
+        <div class="flex-none p-2 bg-warn-soft rounded-r">
+          <div class="flex place-content-center w-full aspect-square">
+            <div v-if="mcsUrl" class="relative">
+              <div v-if="mcLoading" class="absolute inset-0 flex items-center justify-center text-[12px] text-warn-ink">matching cover...</div>
+              <div v-else-if="mcLoadFailed" class="absolute inset-0 flex items-center justify-center text-[12px] text-bad">match failed</div>
               <img 
                 :src="mcsUrl" 
-                class=" w-full h-full object-cover"
-                :class="{' opacity-0': mcLoading||mcLoadFailed}"
+                class="w-full h-full object-cover rounded-r"
+                :class="{'opacity-0': mcLoading||mcLoadFailed}"
                 @load="handleMatchCoverSuccess"
                 @error="handleMatchCoverFailed"
               >
             </div>
-            <div v-else class=" h-fit text-center">no img</div>
+            <div v-else class="h-fit text-center text-[12px] text-warn-ink">no img</div>
           </div>
         </div>
       </div>
     </div>
-    <div class=" flex-1 w-full mt-2 overflow-y-scroll text-sm">
-      <table class=" w-full table-auto"> 
-        <thead class=" sticky top-0 bg-gray-100 border-b-gray-300">
+    <div class="flex-1 w-full mt-2 overflow-y-auto text-[13px]">
+      <table class="tbl"> 
+        <thead class="sticky top-0">
           <tr>
-            <th class=" w-6 p-1">Score</th>
-            <th class=" p-1">Title</th>
-            <th class=" p-1">Artist</th>
-            <th class=" w-8 p-1">Dura</th>
-            <th class=" p-1">Album</th>
-            <th class=" w-8 p-1">Year</th>
-            <th class=" w-8 p-1">Country</th>
-            <th class=" p-1">Alb Artist</th>
+            <th class="w-16">Score</th>
+            <th>Title</th>
+            <th>Artist</th>
+            <th class="w-16">Dura</th>
+            <th>Album</th>
+            <th class="w-14">Year</th>
+            <th class="w-18">Country</th>
+            <th>Alb Artist</th>
           </tr>
         </thead>
-        <tbody class=" divide-y divide-gray-100">
+        <tbody>
           <tr v-for="(item, index) in acoustInfoList" 
             :key="index" 
-            :class="{' bg-cyan-100': selectedRow == index}"
+            class="cursor-pointer"
+            :class="{'!bg-accent-soft': selectedRow == index}"
             @click="handleRowSelect(index)"
           >
-            <td class=" p-1 text-center">{{ item.score.toFixed(2) }}</td>
-            <td class=" p-1">{{ item.title }}</td>
-            <td class=" p-1">{{ join_names(item.artists) }}</td>
-            <td class=" p-1 text-center">{{ formatTimeDuration(item.duration) }}</td>
-            <td class=" p-1">{{ item.release_title }}<span class=" text-sm text-gray-400">({{ item.release_track_count }})</span></td>
-            <td class=" p-1 text-center">{{ item.release_year }}</td>
-            <td class=" p-1 text-center">{{ item.release_country }}</td>
-            <td class=" p-1">{{ join_names(item.release_artists) }}</td>
+            <td class="text-center num">{{ item.score.toFixed(2) }}</td>
+            <td>{{ item.title }}</td>
+            <td>{{ join_names(item.artists) }}</td>
+            <td class="text-center num">{{ formatTimeDuration(item.duration) }}</td>
+            <td>{{ item.release_title }}<span class="text-ink-3">({{ item.release_track_count }})</span></td>
+            <td class="text-center num">{{ item.release_year }}</td>
+            <td class="text-center">{{ item.release_country }}</td>
+            <td>{{ join_names(item.release_artists) }}</td>
           </tr>
         </tbody>
       </table>
-      <div class=" mx-auto p-2 text-center" v-if="acoustInfoList_loading">matching...</div>
-      <div class=" mx-auto p-2 text-center" v-else-if="!acoustInfoList.length">no result</div>
+      <div class="p-3 text-center text-ink-3" v-if="acoustInfoList_loading">matching...</div>
+      <div class="p-3 text-center text-ink-3" v-else-if="!acoustInfoList.length">no result</div>
     </div>
-    <div class=" flex-none p-1 text-right">
+    <div class="flex-none pt-3 flex justify-end gap-2">
+      <button type="button" class="btn" @click="emits('close')">Cancel</button>
       <button type="button" 
-        class="  h-6 min-w-28 px-1 mr-2 py-0 disabled:bg-gray-500 disabled:cursor-auto" 
-        :disabled="selectedRow<0" 
+        class="btn btn-primary" 
+        :disabled="busy || selectedRow<0" 
         @click="handleConfirm"
       >Match{{ (mcLoaded && useNewCoverArt) ? '(Use matched Cover Art)' : '' }}</button>
-      <button type="button" class="  h-6 w-28 px-1 py-0" @click="emits('close')">Cancel</button>
     </div>
   </div>
 </template>

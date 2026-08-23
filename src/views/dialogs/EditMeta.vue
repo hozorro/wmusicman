@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, inject } from 'vue';
+import { busyState, type BusyState } from '@/composables/busy'
 import { openDialog } from '@/composables/wdialog';
 import EditMulti from './EditMulti.vue';
+
+// While any global task is running, submit is disabled (read-only)
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 const props = defineProps<{meta: MetaEditInput}>()
 const emits = defineEmits(['close', 'confirm', 'select'])
@@ -29,39 +33,32 @@ function handleConfirm() {
 </script>
 
 <template>
-  <div class=" grid grid-cols-[4rem_1fr] gap-2 items-center">
-    <div class="text-right">Title</div> 
+  <div class="grid grid-cols-[4.5rem_1fr] gap-x-4 gap-y-3 items-center">
+    <div class="text-right text-[13px] text-ink-3">Title</div> 
     <div>
-      <input type="text" class=" placeholder:text-gray-800" v-model="localValue.title.uniformValue" :placeholder="localValue.title.isDifferent ? '**多个不同值**' : ''">
+      <input type="text" class="input w-full" v-model="localValue.title.uniformValue" :placeholder="localValue.title.isDifferent ? '**多个不同值**' : ''" :disabled="busy">
     </div>
-    <div class="text-right">Artists</div>
-    <div class=" flex py-2 pl-2">
-      <div class=" flex-1 mr-2 text-gray-800">{{ localValue.artists.isDifferent ? '**多个不同值**' : localValue.artists.uniformValue.join(',') }}</div>
-      <button @click="editMultiValue('artists', localValue.artists.uniformValue, localValue.artists.isDifferent)">...</button>
+    <div class="text-right text-[13px] text-ink-3">Artists</div>
+    <div class="flex items-center gap-2">
+      <div class="input flex-1 !bg-panel !cursor-default truncate">{{ localValue.artists.isDifferent ? '**多个不同值**' : localValue.artists.uniformValue.join(',') }}</div>
+      <button type="button" class="btn btn-ghost btn-sm flex-none" :disabled="busy" @click="editMultiValue('artists', localValue.artists.uniformValue, localValue.artists.isDifferent)">编辑</button>
     </div>
-    <div class="text-right">Album</div>
+    <div class="text-right text-[13px] text-ink-3">Album</div>
     <div>
-      <input type="text" class=" placeholder:text-gray-800" v-model="localValue.album.uniformValue" :placeholder="localValue.album.isDifferent ? '**多个不同值**' : ''">
+      <input type="text" class="input w-full" v-model="localValue.album.uniformValue" :placeholder="localValue.album.isDifferent ? '**多个不同值**' : ''" :disabled="busy">
     </div>
-    <div class="text-right">Year</div>
+    <div class="text-right text-[13px] text-ink-3">Year</div>
     <div>
-      <input type="number" class=" placeholder:text-gray-800" v-model="localValue.year.uniformValue" :placeholder="localValue.year.isDifferent ? '**多个不同值**' : ''">
+      <input type="number" class="input w-full" v-model="localValue.year.uniformValue" :placeholder="localValue.year.isDifferent ? '**多个不同值**' : ''" :disabled="busy">
     </div>
-    <div class="text-right">Genres</div>
-    <div class=" flex py-2 pl-2">
-      <div class=" flex-1">{{ localValue.genres.isDifferent ? '**多个不同值**' : localValue.genres.uniformValue.join(',') }}</div>
-      <button @click="editMultiValue('genres', localValue.genres.uniformValue, localValue.genres.isDifferent)">...</button>
+    <div class="text-right text-[13px] text-ink-3">Genres</div>
+    <div class="flex items-center gap-2">
+      <div class="input flex-1 !bg-panel !cursor-default truncate">{{ localValue.genres.isDifferent ? '**多个不同值**' : localValue.genres.uniformValue.join(',') }}</div>
+      <button type="button" class="btn btn-ghost btn-sm flex-none" :disabled="busy" @click="editMultiValue('genres', localValue.genres.uniformValue, localValue.genres.isDifferent)">编辑</button>
     </div>
   </div>
-  <div class=" mt-4 p-1 text-right">
-    <button type="button" class="  h-7 w-28 px-1 mr-2 py-0 disabled:bg-gray-500 disabled:cursor-auto" :disabled="!isModified" @click="handleConfirm">Confirm</button>
-    <button type="button" class="  h-7 w-28 px-1 py-0" @click="emits('close')">Cancel</button>
+  <div class="mt-5 flex justify-end gap-2">
+    <button type="button" class="btn" @click="emits('close')">Cancel</button>
+    <button type="button" class="btn btn-primary" :disabled="busy || !isModified" @click="handleConfirm">Confirm</button>
   </div>
 </template>
-
-<style scoped>
-@reference "tailwindcss";
-input {
-  @apply w-full p-2 rounded-md border border-gray-300 focus:border-cyan-500 transition-all outline-none text-gray-800
-}
-</style>

@@ -46,8 +46,10 @@ function changeSort(field: string) {
 <template>
   <template v-if="scope"> <!-- Body -->
     <template v-if="rowSelectable">
-      <div class=" text-center">
-        <input type="checkbox" :checked="rowSelected.includes(scope.id)" @change="toggleRowSelection()">
+      <div class="text-center">
+        <label class="check">
+          <input type="checkbox" :checked="rowSelected.includes(scope.id)" @change="toggleRowSelection()">
+        </label>
       </div>
     </template>
     <template v-else>
@@ -73,23 +75,34 @@ function changeSort(field: string) {
   </template>
   <template v-else> <!-- Header -->
     <template v-if="rowSelectable">
-      <th :style="{ width: width }">
-        <input type="checkbox" :checked="allSelected" @change="toggleAllRowsSelection">
+      <th :style="{ width: width }" class="text-center">
+        <label class="check justify-center">
+          <input type="checkbox" :checked="allSelected" @change="toggleAllRowsSelection">
+        </label>
       </th>
     </template>
     <template v-else>
       <template v-if="columnEditable">
-        <th :style="{ width: width }" class=" py-1">
-          <button type="button" class=" h-6 px-1 py-0" @click="emits('editColumn', prop)">{{ label }}</button>
-          <span v-if="sortable" class=" ml-1 inline-block cursor-pointer" @click="changeSort(prop as string)">{{ sortAscend ? '▲' : '▼' }}</span>
+        <th :style="{ width: width }">
+          <button type="button" class="btn btn-ghost btn-sm" @click="emits('editColumn', prop)">{{ label }}</button>
+          <span v-if="sortable" class="sort-arrow" :class="{ active: sortField === prop }" @click="changeSort(prop as string)">{{ sortAscend ? '▲' : '▼' }}</span>
         </th>
       </template>
       <template v-else>
         <th :style="{ width: width }">
           {{ label }}
-          <span v-if="sortable" class=" ml-1 inline-block cursor-pointer" @click="changeSort(prop as string)">{{ sortAscend ? '▲' : '▼' }}</span>
+          <span v-if="sortable" class="sort-arrow" :class="{ active: sortField === prop }" @click="changeSort(prop as string)">{{ sortAscend ? '▲' : '▼' }}</span>
         </th>
       </template>
     </template>
   </template>
 </template>
+
+<style scoped>
+.sort-arrow {
+  margin-left: 4px; display: inline-block; cursor: pointer;
+  font-size: 10px; color: var(--color-ink-3); transition: color .15s;
+}
+.sort-arrow:hover { color: var(--color-accent); }
+.sort-arrow.active { color: var(--color-accent); }
+</style>

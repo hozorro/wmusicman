@@ -14,26 +14,46 @@ function handleGetPlaylist() {
 </script>
 
 <template>
-  <div class=" bg-white rounded-md w-full p-2">获取外部播放列表，需要外部api</div>
-  <div class=" flex flex-col h-full p-2 mt-4">
-    <div class=" flex-none flex w-full">
-      <div class=" flex-1">
-        <input type="text" v-model="playlistLink" 
-          class=" w-full rounded-md p-1 border border-gray-200 outline-0" placeholder="netease playlist link..." />
+  <div class="flex flex-col gap-4">
+    <div class="card">
+      <div class="card-header">
+        <h2>获取外部播放列表</h2>
+        <span class="sp"></span>
+        <span class="text-[12.5px] text-ink-3">需要外部 api</span>
       </div>
-      <div class=" flex-none ml-2">
-        <button class=" w-28" @click="handleGetPlaylist">Get</button>
+      <div class="card-pad">
+        <div class="flex gap-2.5">
+          <input type="text" v-model="playlistLink" class="input flex-1" placeholder="netease playlist link..." />
+          <button type="button" class="btn btn-primary" @click="handleGetPlaylist">Get</button>
+        </div>
       </div>
     </div>
-    <div class=" flex-1 w-full overflow-y-auto" v-if="data">
-      <div class=" w-full font-bold">{{ data.name }}</div>
-      <div class=" w-full h-full overflow-y-auto">
-        <div v-for="(track, index) in data.tracks" :key="index">
-          <div class=" w-full h-10 p-2 border-b border-gray-200">
-            {{ `${index+1} ${track.artist} - ${track.name}` }}
-            <span class=" ml-2 text-gray-400">({{ track.album }}){{ track.duration }}</span>
-          </div>
-        </div>
+
+    <div v-if="data" class="card">
+      <div class="card-header">
+        <h2>{{ data.name }}</h2>
+        <span class="sp"></span>
+        <span class="tag tag-info num">{{ data.tracks.length }} tracks</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="w-14">#</th>
+              <th>曲目</th>
+              <th class="w-1/3">专辑</th>
+              <th class="w-24">时长</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(track, index) in data.tracks" :key="index">
+              <td class="num text-ink-3">{{ index + 1 }}</td>
+              <td>{{ track.name }} <span class="text-ink-3">- {{ track.artist }}</span></td>
+              <td class="text-ink-3">{{ track.album }}</td>
+              <td class="num text-ink-3">{{ track.duration }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

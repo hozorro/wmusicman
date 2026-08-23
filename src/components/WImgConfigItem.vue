@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { Method } from 'alova';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, inject, watch } from 'vue';
 import WImgUploader from './WImgUploader.vue';
 import { assetImageCache } from '@/utils/general';
+import { busyState, type BusyState } from '@/composables/busy';
 
 interface Props {
   label: string;
@@ -26,6 +27,8 @@ const emit = defineEmits<{
 }>();
 
 // 内部状态
+// While a global task (scan / artwork rebuild) is running, upload operations are disabled.
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 const internalUrl = ref<string | null>(props.modelValue);
 const pendingFile = ref<File | null>(null);
 const actionType = ref<'none' | 'local' | 'default'>('none');
@@ -132,48 +135,49 @@ const handleConfirm = async () => {
 </script>
 
 <template>
-  <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col sm:flex-row gap-6">
-    <!-- 左侧：图片选择区 -->
-    <div class="flex-shrink-0 flex flex-col items-center">
-      <WImgUploader
-        v-model="internalUrl"
-        container-class="w-32 h-32"
-        :disabled="isUploading"
-        :show-progress="true"
-        :is-uploading="isUploading"
-        :upload-progress="progress"
-        :upload-params="uploadParams"
-        @change="handleLocalSelect"
-      />
-      <span class="mt-2 text-sm font-medium text-gray-700">{{ label }}</span>
-    </div>
+  <div class="card">
+    <div class="card-pad flex flex-col sm:flex-row gap-6">
+      <!-- 左侧：图片选择区 -->
+      <div class="flex-shrink-0 flex flex-col items-center">
+        <WImgUploader
+          v-model="internalUrl"
+          container-class="w-32 h-32"
+          :disabled="isUploading || busy"
+          :show-progress="true"
+          :is-uploading="isUploading"
+          :upload-progress="progress"
+          :upload-params="uploadParams"
+          @change="handleLocalSelect"
+        />
+        <span class="mt-2 text-sm font-medium text-ink-1">{{ label }}</span>
+      </div>
 
-    <!-- 右侧：操作区 -->
-    <div class="flex-1 flex flex-col justify-center gap-3 min-w-[120px]">
-      <!-- 主操作按钮 -->
-      <button
-        @click="handleConfirm"
-        :disabled="!isDirty || isUploading"
-        class="w-full py-2 px-4 font-medium transition-colors flex justify-center items-center gap-2"
-        :class="!isDirty || isUploading ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
-      >
-        <span v-if="isUploading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-        {{ isUploading ? '上传中...' : '确认上传' }}
-      </button>
+      <!-- 右侧：操作区 -->
+      <div class="flex-1 flex flex-col justify-center gap-3 min-w-[120px]">
+        <!-- 主操作按钮 -->
+        <button
+          @click="handleConfirm"
+          :disabled="!isDirty || isUploading || busy"
+          class="btn btn-primary w-full justify-center"
+        >
+          <span v-if="isUploading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          {{ isUploading ? '上传中...' : '确认上传' }}
+        </button>
 
-      <!-- 辅助操作 -->
-      <button
-        v-if="enableDefault"
-        @click="handleSetDefault"
-        :disabled="isUploading || isDefaultAlready"
-        class="w-full py-2 px-4"
-      >
-        {{ isDefaultAlready ? '已是默认' : '使用默认' }}
-      </button>
+        <!-- 辅助操作 -->
+        <button
+          v-if="enableDefault"
+          @click="handleSetDefault"
+          :disabled="isUploading || isDefaultAlready || busy"
+          class="btn w-full justify-center"
+        >
+          {{ isDefaultAlready ? '已是默认' : '使用默认' }}
+        </button>
 
-      <!-- 状态提示 -->
-      <div class="text-xs mt-2" :class="isDirty ? 'text-orange-500' : 'text-gray-400'">
-        {{ statusText }}
+        <!-- 状态提示 -->
+        <div class="text-xs mt-2" :class="isDirty ? 'text-warn' : 'text-ink-3'">
+          {{ statusText }}
+        </div>
       </div>
     </div>
   </div>

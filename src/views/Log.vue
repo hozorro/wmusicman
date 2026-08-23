@@ -37,56 +37,95 @@ function handleNext() {
   curPage.value++
   handleLogs()
 }
+// Read-only tag style mapping for log levels
+function levelTag(level: string) {
+  const l = (level || '').toUpperCase()
+  if (l.includes('ERROR') || l.includes('CRITICAL') || l.includes('FATAL')) return 'tag-bad'
+  if (l.includes('WARN')) return 'tag-warn'
+  if (l.includes('INFO')) return 'tag-info'
+  return 'tag-gray'
+}
 </script>
 <template>
-  <div class=" flex flex-col h-full">
-    <div class=" flex-none p-2 rounded-md bg-white">
+  <div class="flex flex-col gap-4 animate-fade-in">
+    <div class="page-head">
       <div>
-        日志类型：<select v-model="logType" class=" mr-2 p-1 w-28 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500">
-          <option value="" selected>全部</option>
-          <option v-for="(l,i) in logInfo?.log_types" :key="i" :value="l.value">{{ l.label }}</option>
-        </select>
-        日志级别：<select v-model="logLevel" class=" mr-2 p-1 w-28 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500">
-          <option value="" selected>全部</option>
-          <option v-for="(l,i) in logInfo?.log_levels" :key="i" :value="l.value">{{ l.label }}</option>
-        </select>
+        <h1>Logs</h1>
+        <p>查询与导出系统运行日志</p>
       </div>
-      <div class=" mt-2">
-        开始时间：<input type="datetime-local" v-model="logStartTime" class=" mr-2 p-1 w-44 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500" />
-        结束时间：<input type="datetime-local" v-model="logEndTime" class=" mr-2 p-1 w-44 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500" />
-        关键词：<input type="text" v-model="keyword" class=" mr-2 p-1 w-44 rounded-sm border border-gray-300 focus:outline-0 focus:border-cyan-500" />
-      </div>
-      <div class=" mt-2">
-        <button type="button" class=" mr-2 p-1 w-28" @click="handleLogs">获取日志</button>
-        <button type="button" class=" mr-2 p-1 w-28" @click="handleExport">导出日志</button>
+      <div class="sp actions">
+        <button type="button" class="btn btn-primary" @click="handleLogs">获取日志</button>
+        <button type="button" class="btn" @click="handleExport">导出日志</button>
       </div>
     </div>
-    <div class=" flex-1 mt-2 w-full h-full rounded-md bg-white overflow-y-auto text-sm">
-      <table class=" w-full table-auto">
-        <thead class=" sticky top-0 bg-gray-100 border-b-gray-300">
-          <tr>
-            <th class=" p-2" width="194px">时间</th>
-            <th class=" p-2">日志器</th>
-            <th class=" p-2">级别</th>
-            <th class=" p-2">位置</th>
-            <th class=" p-2">内容</th>
-          </tr>
-        </thead>
-        <tbody class=" divide-y divide-gray-100"> 
-          <tr v-for="(l,i) in logs" :key="i" class=" hover:bg-gray-200">
-            <td class=" p-2">{{ l.time }}</td>
-            <td class=" p-2">{{ l.logger }}</td>
-            <td class=" p-2">{{ l.level }}</td>
-            <td class=" p-2">{{ l.location }}</td>
-            <td class=" p-2">{{ l.message }}</td>
-          </tr>
-        </tbody>
-      </table>
+
+    <!-- 筛选条 -->
+    <div class="card">
+      <div class="card-pad !py-3.5 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div class="flex items-center gap-2">
+          <label class="text-[12.5px] text-ink-3 flex-none">日志类型</label>
+          <select v-model="logType" class="select !w-32">
+            <option value="" selected>全部</option>
+            <option v-for="(l,i) in logInfo?.log_types" :key="i" :value="l.value">{{ l.label }}</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[12.5px] text-ink-3 flex-none">日志级别</label>
+          <select v-model="logLevel" class="select !w-32">
+            <option value="" selected>全部</option>
+            <option v-for="(l,i) in logInfo?.log_levels" :key="i" :value="l.value">{{ l.label }}</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[12.5px] text-ink-3 flex-none">开始时间</label>
+          <input type="datetime-local" v-model="logStartTime" class="input !w-48" />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[12.5px] text-ink-3 flex-none">结束时间</label>
+          <input type="datetime-local" v-model="logEndTime" class="input !w-48" />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[12.5px] text-ink-3 flex-none">关键词</label>
+          <input type="text" v-model="keyword" class="input !w-44" placeholder="按关键词过滤" />
+        </div>
+      </div>
     </div>
-    <div class=" flex-none mt-2">
-      <span class=" inline-block p-2 rounded-md w-16 border border-cyan-500" v-if="curPage > 1" @click="handlePrev">上一页</span>
-      <span class=" inline-block ml-4 p-2">{{ curPage }}</span>
-      <span class=" inline-block p-2 rounded-md w-16 border border-cyan-500" v-if="pager && curPage < pager.total_pages" @click="handleNext">下一页</span>
+
+    <!-- 日志表格 -->
+    <div class="card flex-1 min-h-0 flex flex-col">
+      <div class="tbl-wrap flex-1 min-h-0 overflow-auto">
+        <table class="tbl">
+          <thead class="sticky top-0 z-10">
+            <tr>
+              <th class="w-48">时间</th>
+              <th class="w-40">日志器</th>
+              <th class="w-24">级别</th>
+              <th class="w-52">位置</th>
+              <th>内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(l,i) in logs" :key="i">
+              <td class="num text-ink-3">{{ l.time }}</td>
+              <td>{{ l.logger }}</td>
+              <td><span class="tag" :class="levelTag(l.level)">{{ l.level }}</span></td>
+              <td class="text-ink-3">{{ l.location }}</td>
+              <td class="text-ink-2">{{ l.message }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="!logs?.length" class="state-box !py-12">
+          <b>暂无日志</b>
+          <span>调整筛选条件后点击「获取日志」</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 px-4 py-3 border-t border-line">
+        <button type="button" class="btn btn-sm" v-if="curPage > 1" @click="handlePrev">上一页</button>
+        <span class="text-[13px] text-ink-2 num px-2">{{ curPage }}</span>
+        <button type="button" class="btn btn-sm" v-if="pager && curPage < pager.total_pages" @click="handleNext">下一页</button>
+        <span class="sp"></span>
+        <span v-if="pager" class="text-[12.5px] text-ink-3 num">共 {{ pager.total }} 条 / {{ pager.total_pages }} 页</span>
+      </div>
     </div>
   </div>
 </template>
