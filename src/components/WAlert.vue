@@ -26,7 +26,7 @@ const toggleDetail = () => showDetail.value = !showDetail.value
 
       </div>
       <div class=" flex-1 p-2">
-        <div class=" text-sm text-ink-2">{{ message }}</div>
+        <div class=" text-sm text-ink-2">{{ props.message }}</div>
         <div class=" mt-4 flex items-center justify-end gap-4">
           <button v-if="detail !== ''" type="button" class="btn" @click="toggleDetail">{{ showDetail ? 'Hide' : 'Show' }} Detail</button>
           <button type="button" class="btn btn-primary mr-4" @click="emits('close')">Close</button>
@@ -34,7 +34,7 @@ const toggleDetail = () => showDetail.value = !showDetail.value
       </div>
     </div>
     <div v-if="showDetail" class=" min-h-64 mt-4 p-2 bg-panel text-xs text-gray-500 rounded-md border border-gray-300">
-      {{ detail }}
+      {{ props.detail }}
     </div>
   </div>
 </template>

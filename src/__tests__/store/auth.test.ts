@@ -66,7 +66,7 @@ describe('Auth Store', () => {
       const store = useAuthStore()
       const result = await store.login('testuser', 'password')
 
-      expect(result.success).toBe(true)
+      expect(result).toBe(true)
       expect(store.accessToken).toBe('new-access-token')
       expect(store.refreshToken).toBe('new-refresh-token')
       expect(store.isAuthenticated).toBe(true)
@@ -81,8 +81,7 @@ describe('Auth Store', () => {
       const store = useAuthStore()
       const result = await store.login('wrong', 'wrong')
 
-      expect(result.success).toBe(false)
-      expect(result.message).toBe('Invalid credentials')
+      expect(result).toBe(false)
       expect(store.isAuthenticated).toBe(false)
     })
 
