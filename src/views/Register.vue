@@ -17,15 +17,38 @@ function handleRegister() {
 </script>
 
 <template>
-  <div class=" w-full h-svh flex align-middle items-center">
-    <div class="w-full h-full flex flex-col items-center justify-center">
-      <div class="text-3xl my-3">注册</div>
-      <div class="w-1/4 min-w-96">
-        <input type="text" v-model="username" class="w-full h-10 p-2 rounded-md border border-gray-300 focus:outline-none focus:border-blue-500" placeholder="用户"/>
-        <input type="password" v-model="password" class="w-full h-10 p-2 mt-4 rounded-md border border-gray-300 focus:outline-none focus:border-blue-500" placeholder="密码"/>
-        <input type="checkbox" id="is_admin" v-model="is_admin" class="mt-4"/> <label for="is_admin">管理员</label>
+  <div class="login-view">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="mark">
+          <svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor">
+            <path d="M216.76,38.52a8,8,0,0,0-6.86-1.45l-128,32A8,8,0,0,0,72,76.67V155.1A36,36,0,1,0,88,184V84.1l112-28v71A36,36,0,1,0,216,152V44A8,8,0,0,0,216.76,38.52Z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="name">WMusic Manager</div>
+          <div class="ver">音乐库管理系统</div>
+        </div>
       </div>
-      <button class="w-1/4 min-w-96 h-10 mt-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none" @click="handleRegister">注册</button>
+      <h1>注册</h1>
+      <p class="lead">创建账号以开始使用系统</p>
+      <div class="login-form">
+        <div class="input-group">
+          <label>用户名</label>
+          <input class="input" type="text" v-model="username" placeholder="请输入用户名"/>
+        </div>
+        <div class="input-group">
+          <label>密码</label>
+          <input class="input" type="password" v-model="password" placeholder="请输入密码"/>
+        </div>
+        <label class="check" for="is_admin">
+          <input type="checkbox" id="is_admin" v-model="is_admin"/> 管理员
+        </label>
+        <button class="btn btn-primary login-btn" @click="handleRegister">注 册</button>
+      </div>
+      <div class="login-foot">
+        已有账号？<router-link to="/login">返回登录</router-link>
+      </div>
     </div>
   </div>
 </template>

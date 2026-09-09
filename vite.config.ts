@@ -6,6 +6,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
+  const apiBase = env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
   return {
     plugins: [
@@ -23,9 +24,12 @@ export default defineConfig(({ mode }) => {
       port: 5175,
       proxy: {
         '/api': {
-          target: env.VITE_BASE_URL,
+          target: apiBase,
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        '/media': {
+          target: apiBase,
+          changeOrigin: true,
         },
       },
     },

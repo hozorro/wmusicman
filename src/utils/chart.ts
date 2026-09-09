@@ -13,7 +13,7 @@ export function barChart(cvs: HTMLCanvasElement, data: [string, number | [number
   if(!ctx) return;
   ctx.font = "12px Arial";
   ctx.textAlign = "center";
-  ctx.fillStyle = "grey";
+  ctx.fillStyle = "#6B8290";
   
   let margin = 30
   let x_min = margin
@@ -40,9 +40,9 @@ export function barChart(cvs: HTMLCanvasElement, data: [string, number | [number
     xs.push(xs_cols);
     ys.push(ys_cols);
   }
-  let colors = ["coral", "darkcyan", 'lightseagreen']
+  let colors = ["#0891B2", "#06B6D4", "#67E8F9"]
   for(let j = 0; j < series_name.length; j++) {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "#0F1E26";
     ctx.fillText(series_name[j], xs[0][j] + bar_width * series.length / 2, y_max + 15);
     for(let i = 0; i < series.length; i++) {
       ctx.fillStyle = colors[i];

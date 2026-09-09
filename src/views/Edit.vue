@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, inject } from "vue";
 import { useRequest } from "alova/client";
 import { invalidateCache } from "alova";
+import { busyState, type BusyState } from '@/composables/busy'
 import WTable from '@/components/WTable.vue'
 import WColumn from '@/components/WColumn.vue';
 import WImgUploader from "@/components/WImgUploader.vue";
@@ -12,6 +13,9 @@ import { openDialog } from "@/composables/wdialog";
 import { getArtistChars, getArtists, getArtist, getAlbum, uploadAlbumArt, updateTrackFieldTag, setArtistArt } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import DefaultTrack from "@/assets/imgs/track.jpg";
+
+// While any global task is running, art selection entries are disabled
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 const artistChar = ref("");
 const {data: artistChars, onSuccess} = useRequest(getArtistChars);
@@ -73,6 +77,7 @@ const faceSrc = ref('')
 const portraitSrc = ref('')
 
 async function handleSelectArt(artType: 'face' | 'portrait') {
+  if (busy.value) return
   const result = await openDialog<string>(SelectArtistArt, {
     title: `${artist.value.name} - 选择${artType === 'face' ? 'Face' : 'Portrait'}`,
     contentProps: {
@@ -166,60 +171,85 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
 </script>
 
 <template>
-  <div class=" w-full h-full flex text-sm">
-    <div class=" flex-none h-full flex flex-col w-96">
-      <div class=" p-2 flex-none grid grid-cols-9 gap-2 w-full bg-white rounded-lg">
-        <template v-for="achar in artistChars"> 
-          <div v-if="achar.hasArtist && artistChar == achar.charName" class=" bg-cyan-700 text-white rounded-md p-1 aspect-square place-content-center cursor-pointer">
-            <div class=" text-center">{{ achar.charName }}</div>
-          </div>
-          <div v-else-if="achar.hasArtist" class=" bg-stone-200 text-stone-700 rounded-md p-1 aspect-square place-content-center cursor-pointer" @click="switchArtists(achar.charName)">
-            <div class=" text-center">{{ achar.charName }}</div>
-          </div>
-          <div v-else class=" bg-stone-100 text-stone-700 rounded-md p-1 aspect-square place-content-center cursor-pointer"> 
-            <div class=" text-center">{{ achar.charName }}</div>
-          </div>
-        </template>
-      </div>
-      <div class=" flex-1 mt-2 overflow-y-auto">
-        <div class=" w-full p-2 overflow-y-auto bg-white rounded-lg divide-y divide-gray-100">
-          <div :class="{'bg-cyan-100': ar.name == artist.name}" v-for="ar in dataArtists" class=" p-1 cursor-pointer" @click="handleArtist(ar.id)">{{ ar.name }}</div>
+  <div class="w-full h-full flex gap-4 animate-fade-in">
+    <!-- 左栏：首字母导航 + 歌手列表 + 歌手图片 -->
+    <div class="flex-none w-90 h-full flex flex-col gap-4 min-h-0">
+      <div class="card flex-none">
+        <div class="card-pad !py-3 flex flex-wrap gap-1.5">
+          <template v-for="achar in artistChars">
+            <div v-if="achar.hasArtist" class="chip !px-0 !gap-0 w-7 h-7 justify-center" :class="{ 'chip-on': artistChar == achar.charName }" @click="switchArtists(achar.charName)">
+              {{ achar.charName }}
+            </div>
+            <div v-else class="chip !px-0 !gap-0 w-7 h-7 justify-center !cursor-default opacity-40">
+              {{ achar.charName }}
+            </div>
+          </template>
         </div>
       </div>
-      <div class=" flex-none flex mt-2">
-        <!-- Face: 点击弹出候选选择窗口 -->
-        <div class="flex-none w-32 cursor-pointer" @click="handleSelectArt('face')">
-          <img v-show="faceSrc" :src="faceSrc" class="w-32 h-32 object-cover rounded-md border border-gray-200" />
-          <div class="text-xs text-center mt-1 text-gray-500">Face</div>
+      <div class="card flex-1 min-h-0 flex flex-col">
+        <div class="card-header"><h2>歌手</h2></div>
+        <div class="flex-1 overflow-y-auto p-2">
+          <div
+            v-for="ar in dataArtists"
+            class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
+            :class="{ 'bg-accent-soft text-accent font-medium': ar.name == artist.name }"
+            @click="handleArtist(ar.id)"
+          >{{ ar.name }}</div>
         </div>
-        <!-- Portrait: 点击弹出候选选择窗口 -->
-        <div class="flex-1 h-32 ml-4 cursor-pointer" @click="handleSelectArt('portrait')">
-          <img v-show="portraitSrc" :src="portraitSrc" class="w-full h-full object-cover rounded-md border border-gray-200" />
-          <div class="text-xs text-center mt-1 text-gray-500">Portrait</div>
+      </div>
+      <div class="card flex-none">
+        <div class="card-header"><h2>歌手图片</h2></div>
+        <div class="card-pad flex gap-4" :class="{ 'opacity-60': busy }">
+          <!-- Face: 点击弹出候选选择窗口 -->
+          <div class="flex-none w-32 cursor-pointer" @click="handleSelectArt('face')">
+            <img v-show="faceSrc" :src="faceSrc" class="w-32 h-32 object-cover rounded-r border border-line" />
+            <div v-show="!faceSrc" class="w-32 h-32 flex items-center justify-center bg-panel rounded-r border border-dashed border-line-strong text-ink-3 text-xs">无图片</div>
+            <div class="text-xs text-center mt-1.5 text-ink-3">Face</div>
+          </div>
+          <!-- Portrait: 点击弹出候选选择窗口 -->
+          <div class="flex-1 h-32 cursor-pointer" @click="handleSelectArt('portrait')">
+            <img v-show="portraitSrc" :src="portraitSrc" class="w-full h-32 object-cover rounded-r border border-line" />
+            <div v-show="!portraitSrc" class="w-full h-32 flex items-center justify-center bg-panel rounded-r border border-dashed border-line-strong text-ink-3 text-xs">无图片</div>
+            <div class="text-xs text-center mt-1.5 text-ink-3">Portrait</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class=" flex-1 flex flex-col h-full ml-2 p-2 bg-white rounded-lg">
-      <div class=" flex-none border-b border-b-gray-300">{{ artist.name }} 的专辑</div>
-      <div class=" flex-1 flex justify-between overflow-auto">
-        <div class=" flex-1 ml-2 overflow-y-auto">
-          <div class=" h-full p-2 overflow-y-auto  bg-white rounded-lg divide-y divide-gray-100">
-            <div :class="{'bg-cyan-100': al.title == album.title}" v-for="al in artist.main_albums" class=" p-1 cursor-pointer" @click="handleAlbum(al.id)">{{ al.title }}</div>
-            <div :class="{'bg-cyan-100': al.title == album.title}" v-for="al in artist.track_albums" class=" p-1 text-gray-500 cursor-pointer" @click="handleAlbum(al.id)">{{ al.title }}</div>
+    <!-- 右栏：专辑列表 + 曲目表 -->
+    <div class="flex-1 h-full flex flex-col gap-4 min-h-0">
+      <div class="card flex-none">
+        <div class="card-header"><h2>{{ artist.name }} 的专辑</h2></div>
+        <div class="card-pad !py-3 flex items-start gap-5">
+          <div class="flex-1 max-h-40 overflow-y-auto">
+            <div
+              v-for="al in artist.main_albums"
+              class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
+              :class="{ 'bg-accent-soft text-accent font-medium': al.title == album.title }"
+              @click="handleAlbum(al.id)"
+            >{{ al.title }}</div>
+            <div
+              v-for="al in artist.track_albums"
+              class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-3 transition-colors hover:bg-accent-soft"
+              :class="{ 'bg-accent-soft text-accent font-medium': al.title == album.title }"
+              @click="handleAlbum(al.id)"
+            >{{ al.title }}</div>
+          </div>
+          <div class="flex-none">
+            <WImgUploader
+              container-class="flex-none w-32 aspect-square"
+              v-model="albumArtSrc"
+              :upload-method="uploadAlbumArt"
+              :upload-params="{id: album.id}"
+              :disabled="busy"
+              @uploaded="handleAlbumArtUploaded"
+            />
+            <div class="text-xs text-center mt-1.5 text-ink-3">Album Art</div>
           </div>
         </div>
-        <div class=" flex-none p-2 ml-4 w-48">
-          <WImgUploader 
-            container-class=" flex-none w-32 aspect-square"
-            v-model="albumArtSrc"
-            :upload-method="uploadAlbumArt"
-            :upload-params="{id: album.id}"
-            @uploaded="handleAlbumArtUploaded"
-          />
-        </div>
       </div>
-      <div class=" flex-3 p-2 w-full h-full overflow-y-auto bg-white rounded-lg">
-        <div class=" h-full overflow-y-auto"> 
+      <div class="card flex-1 min-h-0 flex flex-col">
+        <div class="card-header"><h2>曲目</h2></div>
+        <div class="flex-1 min-h-0 overflow-y-auto">
           <w-table :data="album.tracks"> 
             <w-column width="3%"
               :row-selectable="true" 

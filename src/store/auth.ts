@@ -3,11 +3,15 @@ import { defineStore } from 'pinia'
 import { login as loginApi, logout as logoutApi, refreshToken as refreshApi, getCurrentUser } from '@/apis/methods/manage'
 import { TokenStorage } from '@/utils/auth'
 import router from '@/router'
+import type { ApiError } from '@/errors/apiError'
+import { transformApiError, transformFieldError } from '@/errors/transform'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string>(TokenStorage.getAccessToken() || '')
   const refreshToken = ref<string>(TokenStorage.getRefreshToken() || '')
   const isLogining = ref(false)
+  const loginErrors = ref<Record<string, any> | null>({})
+  const _redirecting = ref(false)
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const appType = computed(() => import.meta.env.VITE_APP_TYPE)
@@ -16,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     isLogining.value = true
+    loginErrors.value = null
     try {
       const { access_token, refresh_token } = await loginApi(username, password)
 
@@ -26,9 +31,23 @@ export const useAuthStore = defineStore('auth', () => {
 
       await fetchUserInfo()
 
-      return { success: true }
-    } catch (error: any) {
-      return { success: false, message: error.message || "Login failed" }
+      return true
+    } catch (rawError) {
+      const error = rawError as ApiError
+      if (error.code === 20001) {
+        loginErrors.value = {
+          form: transformApiError(error)
+        }
+      } else if (error.fields) {
+        loginErrors.value = {
+          fields: transformFieldError(error.fields)
+        }
+      } else {
+        loginErrors.value = {
+          form: transformApiError(error)
+        }
+      }
+      return false
     } finally {
       isLogining.value = false
     }
@@ -85,17 +104,43 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = ''
   }
 
+  async function redirectToLogin(options?: {
+    redirect?: string
+    playing?: boolean
+  }): Promise<void> {
+    if (_redirecting.value) return
+    _redirecting.value = true
+    
+    try {
+      await logout(false)
+      const currentPath = router.currentRoute.value.fullPath
+      const redirect = options?.redirect
+        ?? (currentPath !== '/' && currentPath !== '/login' ? currentPath : undefined)
+      await router.replace({
+        path: '/login',
+        query: redirect ? { redirect } : {}
+      })
+    } finally {
+      // 延迟重置锁，防止多个401连续触发
+      setTimeout(() => {
+        _redirecting.value = false
+      }, 1000)
+    }
+  }
+
   return { 
     accessToken, 
     refreshToken, 
     userInfo, 
     isAuthenticated, 
     isLogining, 
+    loginErrors,
     appType, 
     login, 
     refresh, 
     fetchUserInfo, 
     logout, 
-    clear 
+    clear,
+    redirectToLogin
   }
 })

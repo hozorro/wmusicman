@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, inject, onMounted } from "vue";
 import { useRequest } from "alova/client";
 import WTable from "@/components/WTable.vue";
 import WColumn from "@/components/WColumn.vue";
@@ -13,6 +13,11 @@ import EditMeta from "./dialogs/EditMeta.vue";
 import TransferOpt from "./dialogs/TransferOpt.vue";
 import { createStageSession, getSessionFiles, addFilesToSession, transferFiles } from "@/apis/methods/manage";
 import { useTransfer } from "@/composables/transfer";
+import { busyState, type BusyState } from '@/composables/busy';
+import { invalidateCache } from "alova";
+
+// While a global task is running, all operations are disabled (read-only view)
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 const systemStore = useSystemStore()
 const sessionFiles = ref<SessionFile[]>([])
@@ -205,6 +210,7 @@ async function handleTransfer(lang: 'CN' | 'FR') {
   const result = await openDialog<string>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
   if (result != null) {
     const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, result)
+    invalidateCache(getSessionFiles(systemStore.curSession))
     if (count) await refreshSessionFiles()
   }
 }
@@ -217,93 +223,123 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class=" my-2">
-    <button type="button" class=" rounded-r-none border-r border-r-gray-50" @click="selectSession">选择会话</button>
-    <button type="button" class=" mr-2 px-2 rounded-l-none" @click="createSession">+</button>
-    <button type="button" class=" mr-2" :disabled="loading" @click="addFilesToCurSession">添加文件</button>
-    <button type="button" class=" mr-2" @click="handleUpdateVersion">升级编码及meta版本</button>
-    <button type="button" :disabled="rowSelected.length == 0" class=" mr-2 disabled:bg-gray-500" @click="handleModifyMeta">修改meta</button>
-    <button type="button" :disabled="!is_modified || loading" class=" mr-2 disabled:bg-gray-500" @click="handleSaveMeta">保存meta</button>
-    <button type="button" class=" mr-2" @click="handleTransfer('CN')">转移至CN</button>
-    <button type="button" class=" mr-2" @click="handleTransfer('FR')">转移至FR</button>
-  </div>
-  <div class=" w-full my-1 p-2 rounded bg-gray-200">
-    当前会话：<span>{{ systemStore.curSession }}</span><span v-if="error" class=" text-red-500 ml-4">{{ error.message }}</span>
-  </div>
-  <div class=" h-[calc(100svh_-_8rem)] overflow-y-auto">
-    <WTable :data="fileList">
-      <WColumn width="3%"
-        :row-selectable="true"
-        v-model:row-selected="rowSelected"
-        v-model:all-selected="allSelected"
-        @toggle-all-selection="handleAllSelection"
-      />
-      <WColumn width="10%" label="File">
-        <template #default="scope">
-          <div class=" text-xs" :title="'Path:' + scope.row.path">
-            <template v-for="(v, i) in scope.row.version" :key="i">
-              <span class=" inline-block mt-1 border border-amber-500 rounded-xs px-1 mr-1 cursor-pointer text-amber-500"
-                :class="{' bg-amber-200' : i === scope.row.ver_activate, 'border-amber-800 text-amber-800': scope.row.version[i] === 'MB'}"
-                @click="handleSwitchVersionType(scope.row.path, i as number)">
-                {{ v }}
-              </span>
+  <div class="flex flex-col gap-4 animate-fade-in">
+    <div class="page-head">
+      <div>
+        <h1>Transfer</h1>
+        <p>暂存区文件的元数据编辑、版本升级与存档转移</p>
+      </div>
+      <div class="sp actions flex-wrap justify-end">
+        <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
+        <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
+        <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
+        <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
+        <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
+        <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
+        <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
+        <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('FR')">转移至FR</button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 text-[13px]">
+      <span class="text-ink-3">当前会话</span>
+      <span class="tag tag-cyan num">{{ systemStore.curSession || '未选择' }}</span>
+      <span v-if="error" class="text-bad ml-4">{{ error.message }}</span>
+    </div>
+
+    <div class="card">
+      <div class="tbl-wrap h-[calc(100svh_-_16rem)] overflow-y-auto" :class="{ 'opacity-70': busy }">
+        <WTable :data="fileList">
+          <WColumn width="3%"
+            :row-selectable="true"
+            v-model:row-selected="rowSelected"
+            v-model:all-selected="allSelected"
+            @toggle-all-selection="handleAllSelection"
+          />
+          <WColumn width="10%" label="File">
+            <template #default="scope">
+              <div class="text-xs" :title="'Path:' + scope.row.path">
+                <span class="tag tag-ok ml-1">{{ scope.row.file_type }}</span>
+                <template v-for="(v, i) in scope.row.version" :key="i">
+                  <span class="ver-tag"
+                    :class="{ 'ver-on': i === scope.row.ver_activate, 'ver-mb': scope.row.version[i] === 'MB', 'pointer-events-none': busy }"
+                    @click="handleSwitchVersionType(scope.row.path, i as number)">
+                    {{ v }}
+                  </span>
+                </template>
+                <span class="tag tag-ok ml-1">{{ scope.row.encoding }}</span>
+              </div>
             </template>
-            <span class=" inline-block mt-1 border border-emerald-500 rounded-xs px-1 text-emerald-500">{{ scope.row.encoding }}</span>
-          </div>
-        </template>
-      </WColumn>
-      <WColumn label="Title" prop="title" cell-editable="direct" @update-value="updateCellValue" />
-      <WColumn width="18%" label="Artists" prop="artists"
-        :column-editable="true"
-        cell-editable="dialog"
-        :sortable="true"
-        :transform="parseMulti"
-        @edit-column="handleEditColumn"
-        @open-cell-edit-dlg="handleOpenCellEditDlg"
-        @sort-data="handleSortData"
-      />
-      <WColumn width="18%" label="Album" prop="album"
-        :column-editable="true"
-        cell-editable="direct"
-        @edit-column="handleEditColumn"
-        @update-value="updateCellValue"
-      />
-      <WColumn width="5%" label="Year" prop="year"
-        :column-editable="true"
-        cell-editable="direct"
-        @edit-column="handleEditColumn"
-        @update-value="updateCellValue"
-      />
-      <WColumn width="5%" label="Genre" prop="genres"
-        :column-editable="true"
-        cell-editable="dialog"
-        :transform="parseMulti"
-        @edit-column="handleEditColumn"
-        @open-cell-edit-dlg="handleOpenCellEditDlg"
-      />
-      <WColumn width="8%" label="Info">
-        <template #default="scope">
-          <div class=" inline-block text-xs">
-            <span 
-              class=" border border-sky-500 rounded-xs px-1 mr-1 text-sky-500"
-              :class="scope.row.cover_art_hash ? (scope.row.cover_art_hash.startsWith('matched_') ? ' bg-yellow-200' : ' bg-sky-200') : ''"
-              :title="scope.row.cover_art_hash">CA</span>
-            <span 
-              class=" border border-fuchsia-500 rounded-xs px-1 mr-1 text-fuchsia-500"
-              :class="scope.row.mb_trackid ? ' bg-fuchsia-200' : ''"
-              :title="scope.row.mb_trackid">MB</span>
-            <span 
-              class=" border border-rose-500 rounded-xs px-1 mr-1 text-rose-500"
-              :class="scope.row.acoustid_id ? ' bg-rose-200' : ''"
-              :title="scope.row.acoustid_id">AC</span>
-          </div>
-        </template>
-      </WColumn>
-      <WColumn width="5%" label="Match">
-        <template #default="scope">
-          <button type="button" class=" h-6 px-1 py-0" @click="handleMatch(scope.row.id)">FPMB</button>
-        </template>
-      </WColumn>
-    </WTable>
+          </WColumn>
+          <WColumn label="Title" prop="title" cell-editable="direct" @update-value="updateCellValue" />
+          <WColumn width="18%" label="Artists" prop="artists"
+            :column-editable="true"
+            cell-editable="dialog"
+            :sortable="true"
+            :transform="parseMulti"
+            @edit-column="handleEditColumn"
+            @open-cell-edit-dlg="handleOpenCellEditDlg"
+            @sort-data="handleSortData"
+          />
+          <WColumn width="18%" label="Album" prop="album"
+            :column-editable="true"
+            cell-editable="direct"
+            @edit-column="handleEditColumn"
+            @update-value="updateCellValue"
+          />
+          <WColumn width="5%" label="Year" prop="year"
+            :column-editable="true"
+            cell-editable="direct"
+            @edit-column="handleEditColumn"
+            @update-value="updateCellValue"
+          />
+          <WColumn width="5%" label="Genre" prop="genres"
+            :column-editable="true"
+            cell-editable="dialog"
+            :transform="parseMulti"
+            @edit-column="handleEditColumn"
+            @open-cell-edit-dlg="handleOpenCellEditDlg"
+          />
+          <WColumn width="8%" label="Info">
+            <template #default="scope">
+              <div class="inline-flex items-center gap-1 text-xs">
+                <span
+                  class="tag"
+                  :class="scope.row.cover_art_hash ? (scope.row.cover_art_hash.startsWith('matched_') ? 'tag-warn' : 'tag-info') : 'tag-gray'"
+                  :title="scope.row.cover_art_hash">CA</span>
+                <span
+                  class="tag"
+                  :class="scope.row.mb_trackid ? 'tag-cyan' : 'tag-gray'"
+                  :title="scope.row.mb_trackid">MB</span>
+                <span
+                  class="tag"
+                  :class="scope.row.acoustid_id ? 'tag-bad' : 'tag-gray'"
+                  :title="scope.row.acoustid_id">AC</span>
+              </div>
+            </template>
+          </WColumn>
+          <WColumn width="5%" label="Match">
+            <template #default="scope">
+              <button type="button" class="btn btn-ghost btn-sm" :disabled="busy" @click="handleMatch(scope.row.id)">FPMB</button>
+            </template>
+          </WColumn>
+        </WTable>
+        <div v-if="!fileList.length" class="state-box !py-10">
+          <b>暂无文件</b>
+          <span>选择会话并添加文件后开始处理</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.ver-tag {
+  display: inline-block; margin-top: 2px; margin-right: 4px; padding: 0 5px;
+  border: 1px solid var(--color-warn); border-radius: 4px; cursor: pointer;
+  color: var(--color-warn); transition: all .15s; line-height: 1.7;
+}
+.ver-tag:hover { background: var(--color-warn-soft); }
+.ver-tag.ver-on { background: var(--color-warn-soft); font-weight: 600; }
+.ver-tag.ver-mb { border-color: var(--color-warn-ink); color: var(--color-warn-ink); }
+</style>

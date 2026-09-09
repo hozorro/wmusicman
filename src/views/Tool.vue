@@ -8,25 +8,17 @@ const menuItems = [
 </script>
 
 <template>
-  <div class=" w-full flex p-2">
-    <ul class=" w-full border-b border-gray-200">
-      <li v-for="item in menuItems" :key="item.title" class=" inline-block mr-2">
-        <router-link 
-          :to="item.path" 
-          class=" w-24 block text-center p-1"
-          active-class="active"
-          :exact-active-class=" item.exact ? 'active' : ''"
-        >{{ item.title }}</router-link>
-      </li>
-    </ul>
-  </div>
-  <div class=" w-full mt-2">
+  <div class="flex flex-col gap-4 animate-fade-in">
+    <div class="flex flex-wrap gap-2">
+      <router-link
+        v-for="item in menuItems"
+        :key="item.title"
+        :to="item.path"
+        class="chip !text-[13px] no-underline"
+        active-class="chip-on"
+        :exact-active-class="item.exact ? 'chip-on' : ''"
+      >{{ item.title }}</router-link>
+    </div>
     <router-view></router-view>
   </div>
 </template>
-
-<style scoped>
-.active {
-  border-bottom: 2px solid #000;
-}
-</style>

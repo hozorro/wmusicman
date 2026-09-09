@@ -168,14 +168,14 @@ onBeforeUnmount(() => {
       v-if="!hasError && displayUrl"
       :src="displayUrl"
       alt="Preview"
-      class="w-full h-full object-cover rounded-md border border-gray-200"
+      class="w-full h-full object-cover rounded-r border border-line"
       @error="handleImageError"
     />
 
     <!-- 无图片时的文字提示 -->
     <div 
       v-else
-      class="w-full h-full flex items-center justify-center bg-gray-50 rounded-md border border-dashed border-gray-300 text-gray-400 text-sm"
+      class="w-full h-full flex items-center justify-center bg-panel rounded-r border border-dashed border-line-strong text-ink-3 text-sm"
     >
       {{ placeholderText }}
     </div>
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
     <!-- 遮罩层 (Hover 时显示提示) -->
     <div 
       v-if="!disabled"
-      class="absolute inset-0 bg-black/40 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+      class="absolute inset-0 bg-ink-1/40 rounded-r flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
     >
       <span class="text-white text-xs font-medium">点击更换</span>
     </div>
@@ -201,11 +201,11 @@ onBeforeUnmount(() => {
     <!-- 底部进度条 -->
     <div 
       v-if="showProgress && isUploadingSup"
-      class="absolute bottom-0 left-0 w-full h-1 bg-gray-200 rounded-b-md overflow-hidden"
+      class="absolute bottom-0 left-0 w-full h-1 bg-panel rounded-b-r overflow-hidden"
     >
       <div 
-        class="h-full bg-blue-500 transition-all duration-300 ease-out"
-        :style="{ width: `${progressSup}%` }"
+        class="h-full transition-all duration-300 ease-out"
+        :style="{ width: `${progressSup}%`, background: 'linear-gradient(90deg, var(--color-accent-light), var(--color-accent))' }"
       ></div>
     </div>
     

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, nextTick } from 'vue';
+import { ref, computed, inject, useTemplateRef, nextTick } from 'vue';
+import { busyState, type BusyState } from '@/composables/busy';
 
 const { cellData = '', editAction = 'direct', align = 'left'} = defineProps<{ 
   cellData: string | number, 
   editAction: 'direct' | 'dialog',
   align?: 'left' | 'center' | 'right'
 }>();
+// While a global task (scan / artwork rebuild) is running, cells stay read-only.
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 const isEditing = ref(false);
 const tmpData = ref(cellData)
 const originalData = ref(cellData)
@@ -14,6 +17,7 @@ const editInput = useTemplateRef('editInput')
 const emits = defineEmits(['updateValue', 'opendlg'])
 
 function handleDbClick() {
+  if (busy.value) return
   if (editAction === 'dialog') {
     emits('opendlg')
   } else {
@@ -52,7 +56,7 @@ function handleEnter() {
       <input
         type="text"
         ref="editInput"
-        class=" w-full p-1 border border-gray-300 rounded-sm text-cyan-600 text-sm"
+        class="input py-0.5 px-2 text-[13px] text-accent"
         v-model="tmpData"
         @blur="handleBlur"
         @keyup.enter="handleEnter"

@@ -38,6 +38,7 @@ declare interface SessionFile {
   id: string;
   ver_activate: number;
   path: string;
+  file_type: string;
   encoding?: string;
   meta_id3: MetaPrimary;
   meta_apev2: MetaPrimary;

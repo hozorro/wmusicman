@@ -23,22 +23,40 @@ console.log(extendList)
 </script>
 
 <template>
-  <div class=" bg-white rounded-md w-full p-2">颜色计算</div>
-  <div class=" w-4/5 grid gap-2 grid-cols-8 mx-auto my-4">
-    <div v-for="i in 16" class=" rounded-md aspect-[3/1]" :style="`background-color: rgba(${i*8},0,0);`"></div>
-  </div>
-  <div class=" flex w-4/5 ml-16">
-    <div class=" flex-none">
-      <div>HEX: <input type="text" v-model="color" class=" w-24 h-6 p-2 my-4 border-2 focus:outline-0 rounded-md" placeholder="#FFFFFF" /></div>
-      <div>R: <input type="text" v-model="rgb[0]" class=" w-24 h-6 p-2 mt-6 border-2 focus:outline-0 rounded-md" placeholder="Red" /></div>
-      <div>G: <input type="text" v-model="rgb[1]" class=" w-24 h-6 p-2 mt-2 border-2 focus:outline-0 rounded-md" placeholder="Green" /></div>
-      <div>B: <input type="text" v-model="rgb[2]" class=" w-24 h-6 p-2 mt-2 border-2 focus:outline-0 rounded-md" placeholder="Blue" /></div>
-    </div>
-    <div class=" flex-1 ml-4"> 
-      <div class=" inline-block align-top w-44 h-44 rounded-md" :style="`background-color: ${color}`"></div>
-      <div class=" inline-block align-top ml-4 p-4 w-44 h-44 rounded-md" :style="`background-color: ${darkColor}`">
-        <div class=" text-lg text-stone-50">雕刻时光</div>
-        <div class=" mt-2 text-sm text-stone-200">唯有音乐可以雕刻时光</div>
+  <div class="flex flex-col gap-4">
+    <div class="card">
+      <div class="card-header"><h2>颜色计算</h2></div>
+      <div class="card-pad">
+        <div class="grid gap-2 grid-cols-8 mb-5">
+          <div v-for="i in 16" class="rounded-r aspect-[3/1]" :style="`background-color: rgba(${i*8},0,0);`"></div>
+        </div>
+        <div class="flex flex-wrap gap-8 items-start">
+          <div class="flex flex-col gap-3 w-56">
+            <div class="input-group">
+              <label>HEX</label>
+              <input type="text" v-model="color" class="input" placeholder="#FFFFFF" />
+            </div>
+            <div class="input-group">
+              <label>R</label>
+              <input type="text" v-model="rgb[0]" class="input" placeholder="Red" />
+            </div>
+            <div class="input-group">
+              <label>G</label>
+              <input type="text" v-model="rgb[1]" class="input" placeholder="Green" />
+            </div>
+            <div class="input-group">
+              <label>B</label>
+              <input type="text" v-model="rgb[2]" class="input" placeholder="Blue" />
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-44 h-44 rounded-lg border border-line" :style="`background-color: ${color}`"></div>
+            <div class="p-4 w-44 h-44 rounded-lg" :style="`background-color: ${darkColor}`">
+              <div class="text-lg text-stone-50">雕刻时光</div>
+              <div class="mt-2 text-sm text-stone-200">唯有音乐可以雕刻时光</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

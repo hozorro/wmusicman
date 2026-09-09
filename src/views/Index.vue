@@ -5,10 +5,13 @@ import { invalidateCache } from 'alova';
 import { getServerInfo, initializeMeta, startWatcher, stopWatcher } from '@/apis/methods/manage';
 import { barChart } from '@/utils/chart';
 import { type ScanState, scanState } from '@/composables/key'
+import { busyState, type BusyState } from '@/composables/busy'
 import dayjs from 'dayjs';
 
 
 const {scanInfo} = inject<ScanState>(scanState) as ScanState
+// Global busy state: disable all operations while scan / artwork rebuild is running
+const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 // 服务器信息
 const operation_system = ref('')
@@ -91,75 +94,123 @@ async function handleWatcher() {
 </script>
 
 <template>
-  <div class=" my-2">
-    <button type="button" class=" mr-2 p-2 w-36" @click="refreshServerInfo">刷新服务器信息</button>
-    <button type="button" class=" mr-2 p-2 w-36" @click="initializeMetaData">初始化meta数据</button>
-  </div>
-  <div class=" h-[calc(100svh_-_6rem)] overflow-y-auto block">
-    <div class=" p-2 grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-2">
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">系统信息</div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li>操作系统：{{ operation_system }}</li>
-          <li>Python版本：{{ python_version }}</li>
-          <li>FastAPI版本：{{ fastapi_version }}</li>
-          <li>服务器运行时间：{{ server_uptime }}</li>
-        </ul>
+  <div class="flex flex-col gap-4 animate-fade-in">
+    <!-- 页头 -->
+    <div class="page-head">
+      <div>
+        <h1>仪表盘</h1>
+        <p>系统概览与音乐库基础统计</p>
       </div>
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">监控&扫描
-          <span class=" ml-3 text-base font-normal">
-            <button class=" w-20 h-6 p-0" @click="handleWatcher">{{ watcher_status ? '关闭监控' : '开启监控' }}</button>
-          </span>
-        </div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li>监控状态：{{ watcher_status }}</li>
-          <li>监控路径：{{ watcher_path }}</li>
-          <li>扫描状态：{{ scanInfo.is_scanning }}</li>
-          <li>扫描进度：{{ scanner_progress }}</li>
-        </ul>
-      </div>
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">基础统计信息</div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li>歌曲数量：{{ track_count }}</li>
-          <li>专辑数量：{{ album_count }}</li>
-          <li>艺术家数量：{{ artist_count }}</li>
-          <li>文件夹数量：{{ folder_count }}</li>
-          <li>流派数量：{{ genre_count }}</li>
-          <li>播放列表数量：{{ playlist_count }}</li>
-        </ul>
-      </div>
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">最近添加歌曲</div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li v-for="item in latest_added_tracks">{{ item.title }}
-            <span class=" text-sm text-gray-500">({{ dayjs(item.created_at).format('YYYY-MM-DD') }})</span>
-          </li>
-        </ul>
-      </div>
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">歌曲播放信息</div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li>总播放次数：{{ total_played_count }}</li>
-          <li v-for="item in recent_play">{{ item.title }}</li>
-        </ul>
-      </div>
-      <div class=" min-w-96 bg-white rounded-md shadow-md p-2 m-2">
-        <div class=" text-xl font-bold">歌手播放信息</div>
-        <hr class=" my-2 text-gray-300" />
-        <ul>
-          <li v-for="item in top_played_artist">{{ item.name }} ({{ item.play_count }}次)</li>
-        </ul>
+      <div class="sp actions">
+        <button type="button" class="btn" :disabled="busy" @click="refreshServerInfo">刷新服务器信息</button>
+        <button type="button" class="btn btn-primary" :disabled="busy" @click="initializeMetaData">初始化meta数据</button>
       </div>
     </div>
-    <div class=" mt-2 w-full rounded-md shadow-md">
-      <canvas ref="chart" class=" w-full h-[300px]" :width="cvWidth" height="300"></canvas>
+
+    <!-- 基础统计 KPI -->
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      <div class="kpi">
+        <div class="kpi-k">歌曲数量</div>
+        <div class="kpi-v">{{ track_count }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">专辑数量</div>
+        <div class="kpi-v">{{ album_count }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">艺术家数量</div>
+        <div class="kpi-v">{{ artist_count }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">文件夹数量</div>
+        <div class="kpi-v">{{ folder_count }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">流派数量</div>
+        <div class="kpi-v">{{ genre_count }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">播放列表数量</div>
+        <div class="kpi-v">{{ playlist_count }}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
+      <!-- 系统信息 -->
+      <div class="card">
+        <div class="card-header"><h2>系统信息</h2></div>
+        <div class="card-pad">
+          <div class="setting-row"><div class="info"><b>操作系统</b></div><span class="text-[13px] text-ink-2 num">{{ operation_system }}</span></div>
+          <div class="setting-row"><div class="info"><b>Python 版本</b></div><span class="text-[13px] text-ink-2 num">{{ python_version }}</span></div>
+          <div class="setting-row"><div class="info"><b>FastAPI 版本</b></div><span class="text-[13px] text-ink-2 num">{{ fastapi_version }}</span></div>
+          <div class="setting-row"><div class="info"><b>服务器运行时间</b></div><span class="text-[13px] text-ink-2 num">{{ server_uptime }}</span></div>
+        </div>
+      </div>
+
+      <!-- 监控&扫描 -->
+      <div class="card">
+        <div class="card-header">
+          <h2>监控&amp;扫描</h2>
+          <span class="sp"></span>
+          <button class="btn btn-sm" :disabled="busy" @click="handleWatcher">{{ watcher_status ? '关闭监控' : '开启监控' }}</button>
+        </div>
+        <div class="card-pad">
+          <div class="setting-row">
+            <div class="info"><b>监控状态</b></div>
+            <span class="tag" :class="watcher_status ? 'tag-ok' : 'tag-gray'">{{ watcher_status ? 'Running' : 'Stopped' }}</span>
+          </div>
+          <div class="setting-row"><div class="info"><b>监控路径</b><span class="block truncate max-w-64">{{ watcher_path }}</span></div></div>
+          <div class="setting-row">
+            <div class="info"><b>扫描状态</b></div>
+            <span class="tag" :class="scanInfo.is_scanning ? 'tag-cyan' : 'tag-gray'">{{ scanInfo.is_scanning ? 'Scanning' : 'Idle' }}</span>
+          </div>
+          <div class="setting-row"><div class="info"><b>扫描进度</b><span class="text-ink-3 num">{{ scanner_progress || '-' }}</span></div></div>
+        </div>
+      </div>
+
+      <!-- 最近添加歌曲 -->
+      <div class="card">
+        <div class="card-header"><h2>最近添加歌曲</h2></div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>标题</th><th class="n">添加日期</th></tr></thead>
+            <tbody>
+              <tr v-for="item in latest_added_tracks" :key="item.title as string">
+                <td>{{ item.title }}</td>
+                <td class="n text-ink-3">{{ dayjs(item.created_at).format('YYYY-MM-DD') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="!latest_added_tracks.length" class="state-box !py-8">暂无数据</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 播放统计 -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><h2>歌曲播放信息</h2><span class="sp tag tag-cyan num">总播放 {{ total_played_count }}</span></div>
+        <div class="card-pad flex flex-col gap-1.5">
+          <div v-for="item in recent_play" :key="String(item.title)" class="text-[13.5px] text-ink-2">{{ item.title }}</div>
+          <div v-if="!recent_play.length" class="text-ink-3 text-[13px]">暂无播放记录</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>歌手播放信息</h2></div>
+        <div class="card-pad flex flex-col gap-1.5">
+          <div v-for="item in top_played_artist" :key="item.name as string" class="flex items-center gap-2 text-[13.5px]">
+            <span class="text-ink-2 flex-1 truncate">{{ item.name }}</span>
+            <span class="tag tag-gray num">{{ item.play_count }}次</span>
+          </div>
+          <div v-if="!top_played_artist.length" class="text-ink-3 text-[13px]">暂无数据</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 柱状图 -->
+    <div class="chart-box">
+      <header><h3>歌手曲目统计</h3></header>
+      <canvas ref="chart" class="w-full h-[300px]" :width="cvWidth" height="300"></canvas>
     </div>
   </div>
 </template>
