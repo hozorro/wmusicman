@@ -165,7 +165,7 @@ export const updateMetaTags = (session_id: string, items: FileInfoMeta[]) => {
 export const transferFiles = (items: string[], lang: string, session_id: string, playlist: string) => { 
   return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/archive?lang=${lang}`,
     { items, playlist },
-    { name: "transfer-files"}
+    { name: "transfer-files", timeout: 1000 * 60 * 10 }
   );
 }
 // #endregion

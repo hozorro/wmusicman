@@ -14,6 +14,7 @@ import TransferOpt from "./dialogs/TransferOpt.vue";
 import { createStageSession, getSessionFiles, addFilesToSession, transferFiles } from "@/apis/methods/manage";
 import { useTransfer } from "@/composables/transfer";
 import { busyState, type BusyState } from '@/composables/busy';
+import { invalidateCache } from "alova";
 
 // While a global task is running, all operations are disabled (read-only view)
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -209,6 +210,7 @@ async function handleTransfer(lang: 'CN' | 'FR') {
   const result = await openDialog<string>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
   if (result != null) {
     const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, result)
+    invalidateCache(getSessionFiles(systemStore.curSession))
     if (count) await refreshSessionFiles()
   }
 }
@@ -257,6 +259,7 @@ onMounted(() => {
           <WColumn width="10%" label="File">
             <template #default="scope">
               <div class="text-xs" :title="'Path:' + scope.row.path">
+                <span class="tag tag-ok ml-1">{{ scope.row.file_type }}</span>
                 <template v-for="(v, i) in scope.row.version" :key="i">
                   <span class="ver-tag"
                     :class="{ 'ver-on': i === scope.row.ver_activate, 'ver-mb': scope.row.version[i] === 'MB', 'pointer-events-none': busy }"

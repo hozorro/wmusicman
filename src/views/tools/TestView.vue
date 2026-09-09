@@ -2,6 +2,7 @@
 import { ref, computed, inject } from 'vue';
 import { busyState, type BusyState } from '@/composables/busy'
 import { testPostBack, testGet } from '@/apis/methods/manage';
+import { wAlert } from '@/composables/walert';
 
 // While any global task is running, test request entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -42,6 +43,7 @@ const handleGet = async () => {
       <div class="flex flex-wrap gap-2.5 items-center">
         <button type="button" class="btn btn-primary" :disabled="busy" @click="handlePost">Post</button>
         <button type="button" class="btn" :disabled="busy" @click="handleGet">Get</button>
+        <button type="button" class="btn" @click="wAlert('This is a test alert', 'alert details')">Alert</button>
       </div>
 
       <!-- 响应预览 -->

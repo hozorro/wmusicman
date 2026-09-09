@@ -14,12 +14,10 @@ async function handleLogin() {
   errorMsg.value = ''
   const result = await authStore.login(username.value, password.value)
 
-  if (result.success) {
+  if (result) {
     const redirect = route.query.redirect as string
     const targetPath = redirect || '/'
     router.push(targetPath)
-  } else {
-    errorMsg.value = result.message
   }
 }
 </script>
@@ -49,7 +47,7 @@ async function handleLogin() {
           <label>密码</label>
           <input class="input" type="password" v-model="password" placeholder="请输入密码" @keypress.enter.prevent="handleLogin"/>
         </div>
-        <p v-if="errorMsg" class="text-bad text-[12.5px]">{{ errorMsg }}</p>
+        <p v-if="authStore.loginErrors?.form" class="text-bad text-[12.5px]">{{ authStore.loginErrors.form }}</p>
         <button class="btn btn-primary login-btn" @click="handleLogin">登 录</button>
       </div>
       <div class="login-foot">

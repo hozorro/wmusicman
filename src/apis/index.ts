@@ -4,6 +4,9 @@ import { createServerTokenAuthentication } from "alova/client";
 import VueHook from "alova/vue";
 import { refreshToken } from "@/apis/methods/manage";
 import { TokenStorage } from "@/utils/auth";
+import type { AxiosError } from "axios";
+import { normalizeError } from "@/errors/normalizeError";
+import { handleGlobalApiError } from "@/errors/handlers";
 
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<typeof VueHook, typeof axiosRequestAdapter>({
   assignToken: (method) => {
@@ -51,16 +54,19 @@ export const generalAlova = createAlova({
     method.config.headers['X-Device-ID'] = TokenStorage.getDeviceId()
   }),
   responded: onResponseRefreshToken({
-    onSuccess: (response) => {
-      console.log(response.data)
-      return response.data.data
-    },
-    onError: (error) => {
-      console.log(error)
-      // Don't show alert for 401 - the router guard handles auth redirect
-      if(error.status !== 401) {
-        alert(`错误[${error.status}]: ${error.message}`)
+    onSuccess: async (response) => {
+      const resData = await response.data
+      console.log(resData)
+      if (resData.code !==200) {
+        alert(`Data error[${resData.code}]: ${resData.msg}`)
+        return
       }
+      return resData.data
+    },
+    onError: (rawError: AxiosError, method) => {
+      console.error(rawError)
+      const error = normalizeError(rawError, method)
+      handleGlobalApiError(error, method)
       throw error
     }
   }),
