@@ -51,6 +51,7 @@ const { data: fetchedFiles, send: loadSessionFiles } = useRequest(
   { immediate: false }
 )
 const refreshSessionFiles = async () => {
+  if (!systemStore.curSession) return
   await loadSessionFiles(systemStore.curSession)
   sessionFiles.value = [...fetchedFiles.value]
 }
@@ -211,7 +212,12 @@ async function handleTransfer(lang: 'CN' | 'FR') {
   if (result != null) {
     const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, result)
     invalidateCache(getSessionFiles(systemStore.curSession))
-    if (count) await refreshSessionFiles()
+    if (count.count < sessionFiles.value.length) {
+      await refreshSessionFiles()
+    } else {
+      sessionFiles.value = []
+      systemStore.curSession = ''
+    }
   }
 }
 
