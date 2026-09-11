@@ -12,7 +12,6 @@ import SelectArtistArt from './dialogs/SelectArtistArt.vue';
 import { openDialog } from "@/composables/wdialog";
 import { getArtistChars, getArtists, getArtist, getAlbum, uploadAlbumArt, updateTrackFieldTag, setArtistArt } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
-import DefaultTrack from "@/assets/imgs/track.jpg";
 
 // While any global task is running, art selection entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -260,7 +259,7 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
             <w-column width="6%" label="IMG">
               <template #default="scope">
                 <div class=" place-items-center" :title="'Path:'+ scope.row.path">
-                  <img :src="scope.row.cover" v-default-src="DefaultTrack" class="w-9 h-9 object-cover rounded-md" />
+                  <img :src="scope.row.cover" class="w-9 h-9 object-cover rounded-md" />
                 </div>
               </template>
             </w-column>

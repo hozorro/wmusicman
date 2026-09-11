@@ -189,8 +189,8 @@ export const getArtist = (id: number) => {
     transform: (res: ArtistInfo) => {
       return {
         ...res,
-        face: baseURL + `artwork/artist/${res.id}?img_cate=face`,
-        portrait: baseURL + `artwork/artist/${res.id}?img_cate=portrait`,
+        face: res.face_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=face` : '',
+        portrait: res.portrait_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=portrait` : '',
       };
     }
   });
@@ -200,10 +200,10 @@ export const getAlbum = (id: number) => {
     transform: (res: AlbumInfo) => {
       return {
         ...res,
-        cover: baseURL + `artwork/album/${res.id}`,
+        cover: res.cover_art_hash ? baseURL + `artwork/album/${res.id}` : '',
         tracks: res.tracks.map(item => ({
           ...item,
-          cover: baseURL + `artwork/track/${item.id}`,
+          cover: item.cover_art_hash ? baseURL + `artwork/track/${item.id}` : '',
         })),
       };
     }

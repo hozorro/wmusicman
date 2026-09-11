@@ -278,7 +278,7 @@ onMounted(() => {
             </template>
           </WColumn>
           <WColumn label="Title" prop="title" cell-editable="direct" @update-value="updateCellValue" />
-          <WColumn width="18%" label="Artists" prop="artists"
+          <WColumn width="15%" label="Artists" prop="artists"
             :column-editable="true"
             cell-editable="dialog"
             :sortable="true"
@@ -287,7 +287,8 @@ onMounted(() => {
             @open-cell-edit-dlg="handleOpenCellEditDlg"
             @sort-data="handleSortData"
           />
-          <WColumn width="18%" label="Album" prop="album"
+          <WColumn width="8%" label="Album Artist" prop="albumartist" :column-editable="false" />
+          <WColumn width="15%" label="Album" prop="album"
             :column-editable="true"
             cell-editable="direct"
             @edit-column="handleEditColumn"
