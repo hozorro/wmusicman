@@ -57,7 +57,7 @@ onSuccess((event) => {
     <div class="page-head">
       <div>
         <h1>上传音乐</h1>
-        <p>选择文件加入上传队列，自动开始上传</p>
+        <p>选择文件加入上传队列，自动开始上传。注意音乐文件尽量在上传前编辑好metadata，尤其注意albumartist。</p>
       </div>
     </div>
 
