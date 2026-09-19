@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef, inject } from 'vue'
 import { useRequest } from 'alova/client';
-import { invalidateCache } from 'alova';
-import { getServerInfo, initializeMeta, startWatcher, stopWatcher } from '@/apis/methods/manage';
+import { getServerInfo } from '@/apis/methods/manage';
 import { barChart } from '@/utils/chart';
 import { type ScanState, scanState } from '@/composables/key'
-import { busyState, type BusyState } from '@/composables/busy'
+
 import dayjs from 'dayjs';
 
 
 const {scanInfo} = inject<ScanState>(scanState) as ScanState
-// Global busy state: disable all operations while scan / artwork rebuild is running
-const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
 // 服务器信息
 const operation_system = ref('')
@@ -38,7 +35,7 @@ const genre_count = ref(0)
 const playlist_count = ref(0)
 const latest_added_tracks = ref<Record<string, number | string>[]>([])
 // 播放数据统计信息
-const recent_play = ref<Record<string, number>[]>([])
+const recent_play = ref<Record<string, number | string>[]>([])
 const top_played_artist = ref<Record<string, number | string>[]>([])
 const total_played_count = ref(0)
 
@@ -48,7 +45,7 @@ const cvWidth = computed(() => {
 })
 const chartData = ref<[string, number | [number, number]][]>([])
 
-const {data:res, send, onSuccess} = useRequest(getServerInfo)
+const {data:res, onSuccess} = useRequest(getServerInfo)
 onSuccess(() => { 
   const info = res.value
   if(info.system_status == 'ready') {
@@ -75,22 +72,6 @@ onSuccess(() => {
     }
   }
 })
-function refreshServerInfo() {
-  invalidateCache(getServerInfo())
-  send()
-}
-async function initializeMetaData() { 
-  await initializeMeta()
-}
-async function handleWatcher() {
-  if (watcher_status.value) { 
-    await stopWatcher()
-    watcher_status.value = false
-  } else {
-    await startWatcher()
-    watcher_status.value = true
-  }
-}
 </script>
 
 <template>
@@ -100,10 +81,6 @@ async function handleWatcher() {
       <div>
         <h1>仪表盘</h1>
         <p>系统概览与音乐库基础统计</p>
-      </div>
-      <div class="sp actions">
-        <button type="button" class="btn" :disabled="busy" @click="refreshServerInfo">刷新服务器信息</button>
-        <button type="button" class="btn btn-primary" :disabled="busy" @click="initializeMetaData">初始化meta数据</button>
       </div>
     </div>
 
@@ -151,14 +128,8 @@ async function handleWatcher() {
       <div class="card">
         <div class="card-header">
           <h2>监控&amp;扫描</h2>
-          <span class="sp"></span>
-          <button class="btn btn-sm" :disabled="busy" @click="handleWatcher">{{ watcher_status ? '关闭监控' : '开启监控' }}</button>
         </div>
         <div class="card-pad">
-          <div class="setting-row">
-            <div class="info"><b>监控状态</b></div>
-            <span class="tag" :class="watcher_status ? 'tag-ok' : 'tag-gray'">{{ watcher_status ? 'Running' : 'Stopped' }}</span>
-          </div>
           <div class="setting-row"><div class="info"><b>监控路径</b><span class="block truncate max-w-64">{{ watcher_path }}</span></div></div>
           <div class="setting-row">
             <div class="info"><b>扫描状态</b></div>
@@ -171,16 +142,11 @@ async function handleWatcher() {
       <!-- 最近添加歌曲 -->
       <div class="card">
         <div class="card-header"><h2>最近添加歌曲</h2></div>
-        <div class="tbl-wrap">
-          <table class="tbl">
-            <thead><tr><th>标题</th><th class="n">添加日期</th></tr></thead>
-            <tbody>
-              <tr v-for="item in latest_added_tracks" :key="item.title as string">
-                <td>{{ item.title }}</td>
-                <td class="n text-ink-3">{{ dayjs(item.created_at).format('YYYY-MM-DD') }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card-pad flex flex-col gap-1.5">
+          <div v-for="item in latest_added_tracks" :key="item.name as string" class="flex items-center gap-2 text-[13.5px]">
+            <span class="text-ink-2 flex-1 truncate">{{ item.title }}</span>
+            <span class="tag tag-gray num">{{ dayjs(item.created_at).format('YYYY-MM-DD') }}</span>
+          </div>
           <div v-if="!latest_added_tracks.length" class="state-box !py-8">暂无数据</div>
         </div>
       </div>
@@ -191,7 +157,10 @@ async function handleWatcher() {
       <div class="card">
         <div class="card-header"><h2>歌曲播放信息</h2><span class="sp tag tag-cyan num">总播放 {{ total_played_count }}</span></div>
         <div class="card-pad flex flex-col gap-1.5">
-          <div v-for="item in recent_play" :key="String(item.title)" class="text-[13.5px] text-ink-2">{{ item.title }}</div>
+          <div v-for="item in recent_play" :key="item.name as string" class="flex items-center gap-2 text-[13.5px]">
+            <span class="text-ink-2 flex-1 truncate">{{ item.title }}</span>
+            <span class="tag tag-gray num">{{ dayjs(item.played_at).format('YYYY-MM-DD') }}</span>
+          </div>
           <div v-if="!recent_play.length" class="text-ink-3 text-[13px]">暂无播放记录</div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { scanState, type ScanState, artworkState, type ArtworkState } from '@/composables/key';
 import { busyState, type BusyReason } from '@/composables/busy';
-import { getScanInfo } from '@/apis/methods/manage';
+import { getScanInfo, getCurrentUser } from '@/apis/methods/manage';
 import { TokenStorage } from '@/utils/auth';
 import { useAuthStore } from '@/store/auth';
 import StatusBar from '@/components/StatusBar.vue';
@@ -60,7 +60,7 @@ const crumb = computed(() => {
   return hit ?? { group: 'Overview', title: 'Dashboard' }
 })
 
-const username = computed(() => authStore.userInfo?.username || 'User')
+const username = ref('')
 
 function handleLogout() {
   authStore.logout(false)
@@ -86,6 +86,13 @@ let artworkEvtSrc: EventSourcePolyfill | null = null
 onMounted(async () => { 
   const info = await getScanInfo()
   updateScanInfo(info)
+  if (authStore.userInfo?.username) {
+    username.value = authStore.userInfo.username
+  } else {
+    const curUser = await getCurrentUser().send()
+    authStore.userInfo = curUser
+    username.value = curUser.username
+  }
 })
 
 onUnmounted(() => { 
@@ -182,11 +189,14 @@ const showNav = ref(true)
 </script>
 
 <template>
-  <div class="app-view">
+  <div 
+    class=" relative w-full h-full grid transition-[grid-template-columns] duration-200 ease-in-out" 
+    :class="{'grid-cols-[var(--side)_1fr]': showNav, 'grid-cols-[var(--side-collapsed)_1fr]': !showNav}"
+  >
     <!-- collapse handle (kept from previous layout) -->
     <button
-      class="nav-handle"
-      :class="{ collapsed: !showNav }"
+      class=" absolute top-10 left-[calc(var(--side)-8px)] z-20 grid place-items-center w-4 h-10 rounded-r-md bg-accent-soft hover:bg-accent-soft-strong text-accent transition-[left] duration-200 ease-in-out"
+      :class="{ 'left-[calc(var(--side-collapsed)-8px)]': !showNav }"
       :title="showNav ? 'Collapse menu' : 'Expand menu'"
       @click="showNav = !showNav"
     >
@@ -196,21 +206,24 @@ const showNav = ref(true)
     </button>
 
     <!-- sidebar -->
-    <nav class="side" :class="{ collapsed: !showNav }">
-      <div class="side-brand">
-        <div class="mark">
+    <nav 
+      class=" flex flex-col overflow-y-auto overflow-x-hidden bg-white border-r border-r-line
+            [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line-strong [&::-webkit-scrollbar-thumb]:rounded-xs"
+    >
+      <div class="flex-none flex items-center gap-2.5 pt-4.5 px-4 pb-3.5 border-b border-b-line">
+        <div class=" flex-none grid place-items-center text-white w-8 h-8 bg-gradient-to-tl from-accent to-accent-light rounded-md">
           <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
             <path d="M216.76,38.52a8,8,0,0,0-6.86-1.45l-128,32A8,8,0,0,0,72,76.67V155.1A36,36,0,1,0,88,184V84.1l112-28v71A36,36,0,1,0,216,152V44A8,8,0,0,0,216.76,38.52Z"/>
           </svg>
         </div>
-        <div v-show="showNav" class="brand-text">
-          <b>WMusic Manager</b>
-          <span>Music Library</span>
+        <div v-show="showNav" class=" leading-[1.2] whitespace-nowrap">
+          <b class="text-[14.5px] text-ink-1 font-bold block">WMusic Manager</b>
+          <span class="text-[11px] text-ink-3">Music Library</span>
         </div>
       </div>
-      <div class="side-nav">
+      <div class=" flex-1 p-2">
         <template v-for="grp in menuGroups" :key="grp.label">
-          <div v-show="showNav" class="grp-label">{{ grp.label }}</div>
+          <div v-show="showNav" class=" text-[11px] text-ink-3 pt-3.5 px-2.5 pb-1.5 -tracking-tighter uppercase font-semibold whitespace-nowrap">{{ grp.label }}</div>
           <router-link
             v-for="item in grp.items"
             :key="item.to"
@@ -220,23 +233,26 @@ const showNav = ref(true)
           >
             <a
               :href="href"
-              class="nav-item"
-              :class="{ on: item.exact ? isExactActive : isActive }"
+              class=" flex items-center gap-2.5 mb-[1px] px-2.5 py-2 rounded-md text-[13.5px] text-ink-2 transition-all duration-150 whitespace-nowrap hover:bg-panel hover:text-ink-1"
+              :class="{ 
+                'bg-accent-soft text-accent font-semibold': item.exact ? isExactActive : isActive,
+                'justify-center p-2.5': !showNav
+              }"
               @click="navigate"
             >
-              <svg viewBox="0 0 256 256" fill="currentColor"><path :d="item.icon" /></svg>
+              <svg width="18" height="18" class=" text-ink-3 flex-none" viewBox="0 0 256 256" fill="currentColor"><path :d="item.icon" /></svg>
               <span v-show="showNav" class="label">{{ item.label }}</span>
             </a>
           </router-link>
         </template>
       </div>
-      <div class="side-foot">
-        <div class="avatar">{{ username.charAt(0).toUpperCase() }}</div>
-        <div v-show="showNav" class="u-info">
-          <b>{{ username }}</b>
-          <span>Administrator</span>
+      <div class=" flex flex-none items-center gap-2.5 px-4 py-3 border-t border-t-line">
+        <div class=" grid flex-none place-items-center w-8 h-8 rounded-full bg-accent-soft text-accent font-semibold text-[13px]">{{ username.charAt(0).toUpperCase() }}</div>
+        <div v-show="showNav" class="leading-[1.3] min-w-0 whitespace-nowrap">
+          <b class=" block text-[13px] text-ink-1">{{ username }}</b>
+          <span class="text-[11px] text-ink-3">Administrator</span>
         </div>
-        <button v-show="showNav" class="btn btn-ghost btn-icon btn-sm logout-btn" title="Logout" @click="handleLogout">
+        <button v-show="showNav" class="btn btn-ghost btn-icon btn-sm ml-auto" title="Logout" @click="handleLogout">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
             <path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm101.66-93.66-32-32a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l32-32A8,8,0,0,0,221.66,122.34Z"/>
           </svg>
@@ -245,105 +261,22 @@ const showNav = ref(true)
     </nav>
 
     <!-- main column -->
-    <div class="main">
-      <header class="topbar">
-        <div class="crumb">
+    <div class=" relative flex flex-col min-w-0 overflow-hidden">
+      <header class=" flex flex-none items-center gap-3.5 py-0 px-6 h-14 border-b border-b-line bg-white">
+        <div class=" flex items-center gap-1.5 text-[13px] text-ink-3">
           <span>{{ crumb.group }}</span>
           <span>/</span>
-          <b>{{ crumb.title }}</b>
+          <b class="text-ink-1 font-semibold">{{ crumb.title }}</b>
         </div>
       </header>
-      <div class="content">
+      <div class=" flex-1 overflow-y-auto py-5 px-6
+        [&::-webkit-scrollbar]:w-1.5 
+        [&::-webkit-scrollbar-thumb]:bg-line-strong 
+        [&::-webkit-scrollbar-thumb]:rounded-xs"
+      >
         <router-view />
       </div>
       <StatusBar />
     </div>
   </div>
 </template>
-
-<style scoped>
-.app-view {
-  width: 100%;
-  display: grid;
-  grid-template-columns: var(--side) 1fr;
-  height: 100%;
-  position: relative;
-  transition: grid-template-columns .2s ease;
-}
-.app-view:has(.side.collapsed) {
-  grid-template-columns: var(--side-collapsed) 1fr;
-}
-
-/* collapse handle */
-.nav-handle {
-  position: absolute; top: 40px; left: calc(var(--side) - 8px); z-index: 20;
-  width: 16px; height: 40px; border-radius: 0 6px 6px 0;
-  background: var(--color-accent-soft); color: var(--color-accent);
-  display: grid; place-items: center; transition: left .2s ease, background .15s;
-}
-.nav-handle:hover { background: var(--color-accent-soft-strong); }
-.nav-handle.collapsed { left: calc(var(--side-collapsed) - 8px); }
-
-/* sidebar */
-.side {
-  background: #fff; border-right: 1px solid var(--color-line);
-  display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
-}
-.side::-webkit-scrollbar { width: 4px; }
-.side::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
-.side-brand {
-  display: flex; align-items: center; gap: 10px; padding: 18px 16px 14px;
-  border-bottom: 1px solid var(--color-line); flex: none;
-}
-.side-brand .mark {
-  width: 32px; height: 32px; border-radius: 8px; flex: none;
-  background: linear-gradient(135deg, var(--color-accent-light), var(--color-accent));
-  display: grid; place-items: center; color: #fff;
-}
-.side-brand .brand-text { line-height: 1.2; white-space: nowrap; }
-.side-brand .brand-text b { font-size: 14.5px; color: var(--color-ink-1); font-weight: 700; display: block; }
-.side-brand .brand-text span { font-size: 11px; color: var(--color-ink-3); }
-.side-nav { padding: 8px; flex: 1; }
-.grp-label {
-  font-size: 11px; color: var(--color-ink-3); padding: 14px 10px 6px; letter-spacing: .05em;
-  text-transform: uppercase; font-weight: 600; white-space: nowrap;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-r);
-  color: var(--color-ink-2); font-size: 13.5px; transition: all .15s; margin-bottom: 1px; white-space: nowrap;
-}
-.nav-item:hover { background: var(--color-panel); color: var(--color-ink-1); }
-.nav-item svg { width: 18px; height: 18px; color: var(--color-ink-3); flex: none; }
-.nav-item.on { background: var(--color-accent-soft); color: var(--color-accent); font-weight: 600; }
-.nav-item.on svg { color: var(--color-accent); }
-.side.collapsed .nav-item { justify-content: center; padding: 10px; }
-.side-foot {
-  padding: 12px 16px; border-top: 1px solid var(--color-line); display: flex;
-  align-items: center; gap: 10px; flex: none;
-}
-.side-foot .avatar {
-  width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent-soft);
-  display: grid; place-items: center; color: var(--color-accent); font-weight: 600; font-size: 13px; flex: none;
-}
-.side-foot .u-info { line-height: 1.3; min-width: 0; white-space: nowrap; }
-.side-foot .u-info b { font-size: 13px; color: var(--color-ink-1); display: block; }
-.side-foot .u-info span { font-size: 11px; color: var(--color-ink-3); }
-.logout-btn { margin-left: auto; }
-
-/* main column */
-.main {
-  display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative;
-}
-.topbar {
-  display: flex; align-items: center; gap: 14px; padding: 0 24px; height: 56px;
-  border-bottom: 1px solid var(--color-line); background: #fff; flex: none;
-}
-.topbar .crumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-ink-3); }
-.topbar .crumb b { color: var(--color-ink-1); font-weight: 600; }
-.content {
-  flex: 1; overflow-y: auto; padding: 20px 24px;
-  padding-bottom: calc(var(--status-h) + 20px);
-}
-.content::-webkit-scrollbar { width: 6px; }
-.content::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 3px; }
-</style>

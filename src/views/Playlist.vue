@@ -2,6 +2,8 @@
 import { ref, computed, inject } from 'vue'
 import { busyState, type BusyState } from '@/composables/busy'
 import { getTmpPlaylistJsons, getCurrentPlaylists, getAllPlaylists, backupPlaylist, createPlaylistFromJson, deleteJson } from '@/apis/methods/manage'
+import { wAlert } from '@/composables/walert'
+import { saveBlob, getFilenameFromHeaders } from '@/utils/download'
 
 // While any global task is running, create/backup/delete entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -12,6 +14,10 @@ const listCate = ref<'json'|'playlist'|'hit'|'fav'>()
 
 function getJsonList(){
   getTmpPlaylistJsons().then((data) => {
+    if(!data.length) {
+      wAlert('没有待创建的 Playlist')
+      return
+    }
     jsonLists.value = data  
     jsonLists.value.forEach(jf => {
       jf.show = false
@@ -38,8 +44,8 @@ function getAllUserPlaylists() {
   })
 }
 async function bkPlaylist(id: number){
-  const res = await backupPlaylist(id)
-  alert(res)
+  const res: any = await backupPlaylist(id).send()
+  saveBlob(res.data, getFilenameFromHeaders(res.headers, `playlist_${id}.json`))
 }
 async function createPlaylist(filename: string){
   const res = await createPlaylistFromJson(filename)
@@ -102,14 +108,17 @@ function delJson(filename: string){
               <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
             </svg>
           </button>
-          <span class="tag tag-info">{{ pl.title }} <span class="num">({{ pl.tracks.length }})</span></span>
-          <span class="text-[12.5px] text-ink-3">{{ pl.username }}</span>
+          <span class=" text-sm font-semibold text-ink-2">{{ pl.title }} <span class="num">({{ pl.tracks.length }})</span></span>
+          <span class="tag tag-info text-[12.5px] text-ink-3">{{ pl.username }}</span>
           <span class="sp"></span>
           <button type="button" class="btn btn-sm" :disabled="busy" @click="bkPlaylist(pl.id)">备份</button>
         </div>
         <div v-show="pl.show" class="border-t border-line bg-panel rounded-b-lg px-5 py-3">
-          <ul class="text-[12.5px] text-ink-2 space-y-1">
-            <li v-for="(t,j) in pl.tracks" :key="j" class="truncate">{{ t.title }} - {{ t.artists.join(',') }}</li>
+          <ul class=" space-y-1">
+            <li v-for="(t,j) in pl.tracks" :key="j" class="truncate">
+              <span class=" text-sm mr-2">{{ j + 1 }}</span>
+              <span class=" text-sm text-ink-2 mr-1">{{ t.title }}</span><span class=" text-xs text-ink-3">{{ t.artists.join(',') }}</span>
+            </li>
           </ul>
         </div>
       </div>

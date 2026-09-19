@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value)
   const appType = computed(() => import.meta.env.VITE_APP_TYPE)
 
-  const userInfo = ref<any>(null)
+  const userInfo = ref<UserInfo | null>(null)
 
   async function login(username: string, password: string) {
     isLogining.value = true

@@ -12,31 +12,25 @@ declare interface AnalysColors {
   average: rgbColor
 }
 
-declare interface ScanInfo {
-  is_scanning: boolean,
-  scan_progress: {
+declare interface LogTypes {
+  log_types: {label: string, value: string}[],
+  log_levels: {label: string, value: string}[]
+}
+
+declare interface LogItem {
+  time: string,
+  level: string,
+  logger: string,
+  location: string,
+  message: string,
+}
+
+declare interface LogPagination {
+  logs: LogItem[],
+  pagination: {
     total: number,
-    processed: number
-    success: number,
-    failed: number,
-    current_file: string
+    page: number,
+    page_size: number,
+    total_pages: number
   }
-}
-
-declare interface ArtworkProgress {
-  phase: string,
-  phase_total: number,
-  phase_processed: number,
-  phase_generated: number,
-  phase_skipped: number,
-  phase_failed: number,
-  total_generated: number,
-  total_skipped: number,
-  total_failed: number,
-  current_item: string
-}
-
-declare interface ArtworkInfo {
-  is_generating: boolean,
-  artwork_progress: ArtworkProgress
 }

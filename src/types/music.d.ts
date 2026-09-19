@@ -1,13 +1,3 @@
-declare interface ResponseData<T> {
-  code: number,
-  msg: string,
-  data: T
-}
-declare interface ScanFolder {
-  path: string,
-  created_at: string,
-  last_update: string
-}
 declare interface Artist {
   id: number,
   name: string,

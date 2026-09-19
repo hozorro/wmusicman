@@ -4,3 +4,8 @@ declare interface TokenData {
   token_type?: string;
   expires_in?: number;
 }
+declare interface UserInfo {
+  id: number;
+  is_admin: boolean,
+  username: string;
+}
