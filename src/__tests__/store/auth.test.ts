@@ -61,7 +61,7 @@ describe('Auth Store', () => {
         refresh_token: 'new-refresh-token'
       }
       vi.mocked(loginApi).mockResolvedValueOnce(mockResponse)
-      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1, username: 'testuser' })
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1, username: 'testuser', is_admin: true })
 
       const store = useAuthStore()
       const result = await store.login('testuser', 'password')
@@ -70,7 +70,7 @@ describe('Auth Store', () => {
       expect(store.accessToken).toBe('new-access-token')
       expect(store.refreshToken).toBe('new-refresh-token')
       expect(store.isAuthenticated).toBe(true)
-      expect(store.userInfo).toEqual({ id: 1, username: 'testuser' })
+      expect(store.userInfo).toEqual({ id: 1, username: 'testuser', is_admin: true })
       expect(TokenStorage.getAccessToken()).toBe('new-access-token')
       expect(TokenStorage.getRefreshToken()).toBe('new-refresh-token')
     })
@@ -97,7 +97,7 @@ describe('Auth Store', () => {
       expect(store.isLogining).toBe(true)
       
       loginResolve!({ access_token: 'token', refresh_token: 'refresh' })
-      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1 })
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1, username: 'testuser', is_admin: true })
       await loginPromise
 
       expect(store.isLogining).toBe(false)
@@ -152,7 +152,7 @@ describe('Auth Store', () => {
       const store = useAuthStore()
       store.accessToken = 'access-token'
       store.refreshToken = 'refresh-token'
-      store.userInfo = { id: 1 }
+      store.userInfo = { id: 1, username: 'testuser', is_admin: true }
 
       vi.mocked(logoutApi).mockResolvedValueOnce('ok')
 
@@ -185,7 +185,7 @@ describe('Auth Store', () => {
       const store = useAuthStore()
       store.accessToken = 'access-token'
       store.refreshToken = 'refresh-token'
-      store.userInfo = { id: 1 }
+      store.userInfo = { id: 1, username: 'testuser', is_admin: true }
 
       store.clear()
 
@@ -199,16 +199,16 @@ describe('Auth Store', () => {
   describe('fetchUserInfo', () => {
     it('should fetch and set user info', async () => {
       const store = useAuthStore()
-      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1, username: 'testuser' })
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ id: 1, username: 'testuser', is_admin: true })
 
       await store.fetchUserInfo()
 
-      expect(store.userInfo).toEqual({ id: 1, username: 'testuser' })
+      expect(store.userInfo).toEqual({ id: 1, username: 'testuser', is_admin: true })
     })
 
     it('should set userInfo to null on error', async () => {
       const store = useAuthStore()
-      store.userInfo = { id: 1 }
+      store.userInfo = { id: 1, username: 'testuser', is_admin: true }
       vi.mocked(getCurrentUser).mockRejectedValueOnce(new Error('Failed'))
 
       await store.fetchUserInfo()
