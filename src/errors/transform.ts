@@ -35,6 +35,7 @@ const errors: Record<number, string> = {
   60504: "playlist artwork not found",
   70501: "playlist backup error",
   70502: "import playlist from json error",
+  70503: "export user playlists to json error",
   70504: "playlist json file not exists",
   70104: "artist not exists",
   70204: "album not exists",

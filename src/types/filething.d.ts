@@ -1,7 +1,45 @@
-declare interface UserInfo {
+declare interface UserDetail {
   id: number,
   username: string,
-  last_login_at: string
+  is_admin: boolean,
+  client_type: string,
+  device_id: string,
+  last_login_at?: string
+}
+
+declare interface ScanFolder {
+  path: string,
+  created_at: string,
+  last_update: string
+}
+
+declare interface ScanInfo {
+  is_scanning: boolean,
+  scan_progress: {
+    total: number,
+    processed: number
+    success: number,
+    failed: number,
+    current_file: string
+  }
+}
+
+declare interface ArtworkProgress {
+  phase: string,
+  phase_total: number,
+  phase_processed: number,
+  phase_generated: number,
+  phase_skipped: number,
+  phase_failed: number,
+  total_generated: number,
+  total_skipped: number,
+  total_failed: number,
+  current_item: string
+}
+
+declare interface ArtworkInfo {
+  is_generating: boolean,
+  artwork_progress: ArtworkProgress
 }
 
 declare interface SessionInfo {
@@ -100,53 +138,3 @@ declare interface MetaEditOutput {
 }
 
 declare type TransferItem = Pick<FileInfo, 'id' | 'title' | 'artists'>
-
-declare interface PlaylistJson {
-  title: string, 
-  filename: string, 
-  username: string, 
-  source: string, 
-  tracks: string[],
-  show?: boolean
-}
-
-declare interface PlaylistBackupInfo {
-  id: number, 
-  title: string, 
-  username: string,
-  tracks: {
-    title: string, 
-    artists: string[]
-  }[],
-  show?: boolean
-}
-
-declare interface ImportResult {
-  total: number,
-  success: number,
-  failed: number,
-  errors: string[]
-}
-
-declare interface LogTypes {
-  log_types: {label: string, value: string}[],
-  log_levels: {label: string, value: string}[]
-}
-
-declare interface LogItem {
-  time: string,
-  level: string,
-  logger: string,
-  location: string,
-  message: string,
-}
-
-declare interface LogPagination {
-  logs: LogItem[],
-  pagination: {
-    total: number,
-    page: number,
-    page_size: number,
-    total_pages: number
-  }
-}

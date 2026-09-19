@@ -1,4 +1,4 @@
-import { generalAlova } from "@/apis";
+import { generalAlova, downloadAlova } from "@/apis";
 import { TokenStorage } from "@/utils/auth";
 
 // const baseSrcURL = import.meta.env.VITE_BASE_SRC_URL;
@@ -29,7 +29,7 @@ export const register = (username: string, password: string, is_admin: boolean) 
   return method;
 }
 export const getCurrentUser = () => { 
-  return generalAlova.Get("/auth/me");
+  return generalAlova.Get<UserInfo>("/auth/me");
 }
 
 // #region initial
@@ -254,16 +254,16 @@ export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, 
 
 // #region backup and restore
 export const getUserList = () => { 
-  return generalAlova.Get<UserInfo[]>("/admin/backup/getuserlist");
+  return generalAlova.Get<UserDetail[]>("/admin/backup/getuserlist");
 }
 export const exportUserPlaylistData = (user_id: number) => { 
-  return generalAlova.Get("/admin/backup/exportuserplaylistdata", {params: {user_id}});
+  return downloadAlova.Get("/admin/backup/exportuserplaylistdata", {params: {user_id}, responseType: 'blob'});
 }
 export const exportUserHitData = (user_id: number) => { 
-  return generalAlova.Get("/admin/backup/exportuserhitdata", {params: {user_id}});
+  return downloadAlova.Get("/admin/backup/exportuserhitdata", {params: {user_id}, responseType: 'blob'});
 }
 export const exportUserFavData = (user_id: number) => { 
-  return generalAlova.Get("/admin/backup/exportuserfavdata", {params: {user_id}});
+  return downloadAlova.Get("/admin/backup/exportuserfavdata", {params: {user_id}, responseType: 'blob'});
 }
 export const importUserPlaylistData = (formData: FormData) => { 
   return generalAlova.Post<ImportResult>("/admin/backup/importuserplaylistdata", formData, {shareRequest: false});
@@ -323,7 +323,7 @@ export const createPlaylistFromJson = (file_name: string) => {
   return generalAlova.Post<string>("/admin/backup/createplaylistfromjson",{file_name});
 }
 export const backupPlaylist = (id: number) => { 
-  return generalAlova.Post<string>("/admin/backup/backupplaylist",{id});
+  return downloadAlova.Get("/admin/backup/backupplaylist", {params: {playlist_id: id}, responseType: 'blob'});
 }
 export const deleteJson = (filename: string) => {
   return generalAlova.Delete<string>("/admin/backup/deleteplaylistjson",{filename});

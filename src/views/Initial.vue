@@ -88,7 +88,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4 animate-fade-in">
     <div class="page-head">
       <div>
-        <h1>Initial</h1>
+        <h1>Initial<span class="text-warn-ink">[Deprecated]</span></h1>
         <p>创建初始目录并设置默认 Artwork</p>
       </div>
     </div>

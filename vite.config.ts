@@ -7,6 +7,7 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   const apiBase = env.VITE_API_BASE || 'http://127.0.0.1:8000'
+  const isLocalBackend = /127\.0\.0\.1|localhost/.test(apiBase)
 
   return {
     plugins: [
@@ -26,6 +27,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiBase,
           changeOrigin: true,
+          ...(isLocalBackend && {
+            rewrite: (path) => path.replace(/^\/api/, '/api/v1'),
+          })
         },
         '/media': {
           target: apiBase,

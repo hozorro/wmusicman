@@ -71,3 +71,24 @@ export const generalAlova = createAlova({
     }
   }),
 })
+
+export const downloadAlova = createAlova({
+  baseURL: '/api/',
+  statesHook: VueHook,
+  cacheFor: null,
+  requestAdapter: axiosRequestAdapter(),
+  timeout: 1000 * 60 * 10,
+  beforeRequest: onAuthRequired(method => {
+    method.config.headers['X-Client-Type'] = import.meta.env.VITE_CLIENT_TYPE || 'admin'
+    method.config.headers['X-Device-ID'] = TokenStorage.getDeviceId()
+  }),
+  responded: onResponseRefreshToken({
+    onSuccess: async (response) => response,
+    onError: (rawError: AxiosError, method) => {
+      console.error(rawError)
+      const error = normalizeError(rawError, method)
+      handleGlobalApiError(error, method)
+      throw error
+    }
+  }),
+})
