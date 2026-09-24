@@ -131,6 +131,9 @@ async function handleFileChange(event: Event) {
         暂无候选图片，请上传
       </div>
     </div>
+    <div class=" mt-4 p-2 bg-amber-200/30 rounded-md border border-amber-100 text-sm text-ink-3">
+      改变图片后需要在播放器中同步曲库以刷新图片hash，否则前端的图片缓存不会主动更新。
+    </div>
 
     <!-- 底部操作栏 -->
     <div class="mt-4 pt-3 flex justify-end gap-2 border-t border-line">

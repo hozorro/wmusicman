@@ -4,6 +4,17 @@ import { TokenStorage } from "@/utils/auth";
 // const baseSrcURL = import.meta.env.VITE_BASE_SRC_URL;
 const baseURL = import.meta.env.VITE_BASE_URL;
 
+export const transformArtwork = (artType: 'track' | 'album' | 'artist', id: number, refresh: boolean = false, imgType?: string) => {
+  let url = '';
+  let hash = refresh ? Date.now().toString() : '';
+  if (artType === 'artist') {
+    url = baseURL + `artwork/artist/${id}?img_cate=${imgType}${hash ? `&hashed=${hash}` : ''}`
+  } else {
+    url = baseURL + `artwork/${artType}/${id}${hash ? `?hashed=${hash}` : ''}`
+  }
+  return url;
+}
+
 export const login = (username: string, password: string) => { 
   const method = generalAlova.Post<TokenData>('/auth/login', {
     username,
