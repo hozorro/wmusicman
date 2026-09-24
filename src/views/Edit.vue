@@ -10,7 +10,11 @@ import EditValue from "./dialogs/EditValue.vue";
 import EditMulti from "./dialogs/EditMulti.vue";
 import SelectArtistArt from './dialogs/SelectArtistArt.vue';
 import { openDialog } from "@/composables/wdialog";
-import { getArtistChars, getArtists, getArtist, getAlbum, uploadAlbumArt, updateTrackFieldTag, setArtistArt } from "@/apis/methods/manage";
+import { 
+  transformArtwork, getArtistArtCandidates,
+  getArtistChars, getArtists, getArtist, getAlbum, 
+  uploadAlbumArt, updateTrackFieldTag, setArtistArt 
+} from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 
 // While any global task is running, art selection entries are disabled
@@ -87,14 +91,14 @@ async function handleSelectArt(artType: 'face' | 'portrait') {
     }
   })
   if (result) {
-    const newUrl = await setArtistArt(artist.value.id, artType, result)
-    if (newUrl) {
+    const res = await setArtistArt(artist.value.id, artType, result)
+    if (res === 'ok') {
       if (artType === 'face') {
-        faceSrc.value = newUrl
+        faceSrc.value = transformArtwork('artist', artist.value.id, true, 'face')
       } else {
-        portraitSrc.value = newUrl
+        portraitSrc.value = transformArtwork('artist', artist.value.id, true, 'portrait')
       }
-      invalidateCache(getArtist(artist.value.id))
+      invalidateCache([getArtist(artist.value.id), getArtistArtCandidates(artist.value.id, artType)])
       alert(`修改${artType}成功`)
     }
   }
