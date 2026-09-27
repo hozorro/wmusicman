@@ -55,9 +55,17 @@ onSuccess((event) => {
 <template>
   <div class="flex flex-col gap-4 animate-fade-in">
     <div class="page-head">
-      <div>
+      <div class=" w-full">
         <h1>上传音乐</h1>
-        <p>选择文件加入上传队列，自动开始上传。注意音乐文件尽量在上传前编辑好metadata，尤其注意albumartist。</p>
+        <p>选择文件加入上传队列，自动开始上传。</p>
+        <div class=" w-full bg-warn-soft/20 ring-warn-soft rounded-md text-sm text-warn-ink p-2 ring-1">
+          音乐文件尽量在上传前使用Picard编辑好metadata，使用Picard时注意：
+          <ol class="list-decimal pl-5">
+            <li>尤其注意albumartist，文件归档时按albumartist创建目录，最好单个albumartist，多个时默认按第一个创建目录；</li>
+            <li>注意运行script，包括繁简转换，artists和genres的转换为数组；</li>
+            <li>保存时命名规则，会转移文件到相应目录。</li>
+          </ol>
+        </div>
       </div>
     </div>
 

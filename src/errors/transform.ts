@@ -55,6 +55,7 @@ const errors: Record<number, string> = {
   70314: "cover art not found",
   70315: "only mp3 and flac files are allowed",
   70316: "update track metadata partial success",
+  70317: "error when delete staging files",
   70601: "upload playdata backup file type error",
   70602: "upload playdata backup file size exceed",
   70603: "upload playdata backup file decode error",

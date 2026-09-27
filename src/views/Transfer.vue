@@ -11,7 +11,7 @@ import EditMulti from "./dialogs/EditMulti.vue";
 import EditValue from "./dialogs/EditValue.vue";
 import EditMeta from "./dialogs/EditMeta.vue";
 import TransferOpt from "./dialogs/TransferOpt.vue";
-import { createStageSession, getSessionFiles, addFilesToSession, transferFiles } from "@/apis/methods/manage";
+import { createStageSession, getSessionFiles, addFilesToSession, transferFiles, deleteFilesFromSession } from "@/apis/methods/manage";
 import { useTransfer } from "@/composables/transfer";
 import { busyState, type BusyState } from '@/composables/busy';
 import { invalidateCache } from "alova";
@@ -71,6 +71,13 @@ const { data: addedFiles, loading, error, send: addFiles } = useRequest(
   () => addFilesToSession(systemStore.curSession), 
   { immediate: false }
 )
+const { loading: deleting, send: deleteFiles } = useRequest(
+  (items: string[]) => deleteFilesFromSession(systemStore.curSession, items),
+  { immediate: false }
+)
+const canDelete = computed(() => {
+  return sessionFiles.value.length > 0 && rowSelected.value.length > 0
+})
 const addFilesToCurSession = async () => {
   if(systemStore.curSession) {
     await addFiles()
@@ -80,6 +87,14 @@ const addFilesToCurSession = async () => {
       alert('没有可添加的文件')
     }
   }
+}
+const handleDeleteFiles = async () => {
+  if (!canDelete.value) return
+  if (!confirm(`确定要删除选中的 ${rowSelected.value.length} 个文件吗？此操作不可恢复。`)) return
+  await deleteFiles(rowSelected.value)
+  // 从列表中移除已删除的文件
+  sessionFiles.value = sessionFiles.value.filter(item => !rowSelected.value.includes(item.id))
+  rowSelected.value = []
 }
 function handleAllSelection() {
   if (allSelected.value) {
@@ -233,12 +248,13 @@ onMounted(() => {
     <div class="page-head">
       <div>
         <h1>Transfer</h1>
-        <p>暂存区文件的元数据编辑、版本升级与存档转移</p>
+        <p>暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【此处可简单编辑文件元数据，批量修改元数据，请使用Picard】</b></p>
       </div>
       <div class="sp actions flex-wrap justify-end">
         <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
         <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
         <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
+        <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy" @click="handleDeleteFiles">删除文件</button>
         <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
         <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
         <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
@@ -262,7 +278,7 @@ onMounted(() => {
             v-model:all-selected="allSelected"
             @toggle-all-selection="handleAllSelection"
           />
-          <WColumn width="10%" label="File">
+          <WColumn width="12%" label="File">
             <template #default="scope">
               <div class="text-xs" :title="'Path:' + scope.row.path">
                 <span class="tag tag-ok ml-1">{{ scope.row.file_type }}</span>
@@ -278,7 +294,7 @@ onMounted(() => {
             </template>
           </WColumn>
           <WColumn label="Title" prop="title" cell-editable="direct" @update-value="updateCellValue" />
-          <WColumn width="15%" label="Artists" prop="artists"
+          <WColumn width="13%" label="Artists" prop="artists"
             :column-editable="true"
             cell-editable="dialog"
             :sortable="true"
@@ -291,6 +307,7 @@ onMounted(() => {
           <WColumn width="15%" label="Album" prop="album"
             :column-editable="true"
             cell-editable="direct"
+            :transform="parseMulti"
             @edit-column="handleEditColumn"
             @update-value="updateCellValue"
           />
@@ -327,7 +344,7 @@ onMounted(() => {
           </WColumn>
           <WColumn width="5%" label="Match">
             <template #default="scope">
-              <button type="button" class="btn btn-ghost btn-sm" :disabled="busy" @click="handleMatch(scope.row.id)">FPMB</button>
+              <button type="button" class="btn btn-ghost btn-sm ring-1" :disabled="busy" @click="handleMatch(scope.row.id)">FPMB</button>
             </template>
           </WColumn>
         </WTable>
