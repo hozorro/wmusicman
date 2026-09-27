@@ -88,7 +88,7 @@ declare interface SessionFile {
   use_matched_cover?: boolean;
 }
 
-type SessionFileBasic = Pick<SessionFile, 'id' | 'ver_activate' | 'path' | 'encoding' | 'version' | 'cover' | 'use_matched_cover'>
+type SessionFileBasic = Pick<SessionFile, 'id' | 'ver_activate' | 'path' | 'file_type' | 'encoding' | 'version' | 'cover' | 'use_matched_cover'>
 
 declare type FileInfo = SessionFileBasic & MetaPrimary & MetaAddtional
 declare type FileInfoMeta = Pick<FileInfo, 'id' | 'use_matched_cover' | keyof MetaPrimary | keyof MetaAddtional>

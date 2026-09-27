@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, inject } from "vue";
-import { useRequest } from "alova/client";
+import { useRequest, usePagination } from "alova/client";
 import { invalidateCache } from "alova";
 import { busyState, type BusyState } from '@/composables/busy'
 import WTable from '@/components/WTable.vue'
@@ -12,13 +12,17 @@ import SelectArtistArt from './dialogs/SelectArtistArt.vue';
 import { openDialog } from "@/composables/wdialog";
 import { 
   transformArtwork, getArtistArtCandidates,
-  getArtistChars, getArtists, getArtist, getAlbum, 
+  getArtistChars, getArtists, getArtistsByPage, getArtist, getAlbum, 
   uploadAlbumArt, updateTrackFieldTag, setArtistArt 
 } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
+import dayjs from 'dayjs';
 
 // While any global task is running, art selection entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
+
+// 歌手列表 tab 模式：'char' = 首字母导航，'latest' = 最新添加
+const artistTab = ref<'char' | 'latest'>('char');
 
 const artistChar = ref("");
 const {data: artistChars, onSuccess} = useRequest(getArtistChars);
@@ -33,6 +37,38 @@ const {data: dataArtists, send: getArtistList} = useRequest((achar: string) => g
   initialData: [],
   immediate: false
 });
+
+// 最新歌手分页（usePagination，append 模式，最多4页）
+const MAX_LATEST_PAGES = 4;
+const {
+  data: latestArtists,
+  page: latestPage,
+  fetching: latestFetching,
+  isLastPage: latestIsLastPage,
+  reload: reloadLatestArtists,
+} = usePagination(
+  (page, pageSize) => getArtistsByPage(page, pageSize),
+  {
+    append: true,
+    initialPage: 1,
+    initialPageSize: 50,
+    total: (res) => res.total,
+    data: (res) => res.list,
+    immediate: false,
+  }
+);
+const canLoadMore = computed(() => !latestIsLastPage.value && latestPage.value < MAX_LATEST_PAGES);
+function loadMoreLatest() {
+  if (canLoadMore.value && !latestFetching.value) {
+    latestPage.value++;
+  }
+}
+function switchArtistTab(tab: 'char' | 'latest') {
+  artistTab.value = tab;
+  if (tab === 'latest' && latestArtists.value.length === 0) {
+    reloadLatestArtists();
+  }
+}
 const {data: artist, send: getArtistInfo} = useRequest((id: number) => getArtist(id),{
   initialData: {main_albums: [], track_albums: [], name: '[歌手]', face: '', portrait: ''},
   immediate: false
@@ -177,29 +213,69 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
   <div class="w-full h-full flex gap-4 animate-fade-in">
     <!-- 左栏：首字母导航 + 歌手列表 + 歌手图片 -->
     <div class="flex-none w-90 h-full flex flex-col gap-4 min-h-0">
+      <!-- Tab 切换 -->
       <div class="card flex-none">
-        <div class="card-pad !py-3 flex flex-wrap gap-1.5">
-          <template v-for="achar in artistChars">
-            <div v-if="achar.hasArtist" class="chip !px-0 !gap-0 w-7 h-7 justify-center" :class="{ 'chip-on': artistChar == achar.charName }" @click="switchArtists(achar.charName)">
-              {{ achar.charName }}
-            </div>
-            <div v-else class="chip !px-0 !gap-0 w-7 h-7 justify-center !cursor-default opacity-40">
-              {{ achar.charName }}
-            </div>
-          </template>
+        <div class="card-pad !py-2 flex justify-center">
+          <div class="seg">
+            <button :class="{ 'seg-on': artistTab === 'char' }" @click="switchArtistTab('char')">首字母</button>
+            <button :class="{ 'seg-on': artistTab === 'latest' }" @click="switchArtistTab('latest')">最新添加</button>
+          </div>
         </div>
       </div>
-      <div class="card flex-1 min-h-0 flex flex-col">
-        <div class="card-header"><h2>歌手</h2></div>
-        <div class="flex-1 overflow-y-auto p-2">
-          <div
-            v-for="ar in dataArtists"
-            class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
-            :class="{ 'bg-accent-soft text-accent font-medium': ar.name == artist.name }"
-            @click="handleArtist(ar.id)"
-          >{{ ar.name }}</div>
+      <!-- 首字母导航 Tab -->
+      <template v-if="artistTab === 'char'">
+        <div class="card flex-1 min-h-0 flex flex-col">
+          <div class="card-header"><h2>按首字母选择歌手</h2></div>
+          <div class="card-pad !py-3 flex-none flex flex-wrap gap-1.5">
+            <template v-for="achar in artistChars">
+              <div v-if="achar.hasArtist" class="chip !px-0 !gap-0 w-7 h-7 justify-center" :class="{ 'chip-on': artistChar == achar.charName }" @click="switchArtists(achar.charName)">
+                {{ achar.charName }}
+              </div>
+              <div v-else class="chip !px-0 !gap-0 w-7 h-7 justify-center !cursor-default opacity-40">
+                {{ achar.charName }}
+              </div>
+            </template>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2 border-t border-line">
+            <div
+              v-for="ar in dataArtists"
+              class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
+              :class="{ 'bg-accent-soft text-accent font-medium': ar.name == artist.name }"
+              @click="handleArtist(ar.id)"
+            >{{ ar.name }}</div>
+          </div>
         </div>
-      </div>
+      </template>
+      <!-- 最新添加 Tab -->
+      <template v-else>
+        <div class="card flex-1 min-h-0 flex flex-col">
+          <div class="card-header"><h2>最新添加的歌手</h2></div>
+          <div class="flex-1 overflow-y-auto p-2">
+            <div
+              v-for="ar in latestArtists"
+              class="rounded-r px-3 py-1.5 cursor-pointer text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
+              :class="{ 'bg-accent-soft text-accent font-medium': ar.name == artist.name }"
+              @click="handleArtist(ar.id)"
+            >
+              <div class="flex justify-between">
+                <div class=" flex-1 text-ink-2">{{ ar.name }}</div>
+                <div class=" flex-none text-xs text-ink-3">{{ dayjs(ar.created_at).format('YYYY-MM-DD') }}</div>
+              </div>
+            </div>
+            <!-- 加载更多 -->
+            <div v-if="latestArtists.length > 0" class="py-2 text-center">
+              <button
+                v-if="canLoadMore"
+                class="btn btn-ghost text-xs"
+                :disabled="latestFetching"
+                @click="loadMoreLatest"
+              >{{ latestFetching ? '加载中...' : '加载更多' }}</button>
+              <span v-else class="text-xs text-ink-3">已加载全部（或最多200条）</span>
+            </div>
+            <div v-if="latestArtists.length === 0 && !latestFetching" class="state-box text-xs">暂无数据</div>
+          </div>
+        </div>
+      </template>
       <div class="card flex-none">
         <div class="card-header"><h2>歌手图片</h2></div>
         <div class="card-pad flex gap-4" :class="{ 'opacity-60': busy }">

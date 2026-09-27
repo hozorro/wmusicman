@@ -8,6 +8,7 @@ export function useTransfer(sessionFiles: Ref<SessionFile[]>) {
       let info = {
         id: item.id,
         path: item.path,
+        file_type: item.file_type,
         cover: item.cover,
         use_matched_cover: item.use_matched_cover,
         encoding: item.encoding,

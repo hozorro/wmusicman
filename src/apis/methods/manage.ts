@@ -179,6 +179,12 @@ export const transferFiles = (items: string[], lang: string, session_id: string,
     { name: "transfer-files", timeout: 1000 * 60 * 10 }
   );
 }
+export const deleteFilesFromSession = (session_id: string, items: string[]) => {
+  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/deletefiles`,
+    { items },
+    { name: 'delete-files-from-session' }
+  );
+}
 // #endregion
 
 // #region  Edit
@@ -194,6 +200,12 @@ export const getArtistChars = () => {
 }
 export const getArtists = (achar: string) => { 
   return generalAlova.Get<Artist[]>("/admin/edit/getartists/" + achar);
+}
+// 按创建时间分页获取歌手列表（由新到老）
+export const getArtistsByPage = (page: number, pageSize: number) => {
+  return generalAlova.Get<{list: ArtistWithCreated[], total: number}>("/admin/edit/getartistsbypage", {
+    params: { page, page_size: pageSize }
+  });
 }
 export const getArtist = (id: number) => { 
   return generalAlova.Get("/admin/edit/artist/" + id, {

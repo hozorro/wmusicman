@@ -14,6 +14,9 @@ declare interface AlbumInfo extends Album {
   cover_art_hash: string,
   tracks: TrackOfAlbum[]
 }
+declare interface ArtistWithCreated extends Artist { 
+  created_at: string,
+}
 declare interface ArtistInfo extends Artist { 
   face_art_hash: string,
   portrait_art_hash: string,
