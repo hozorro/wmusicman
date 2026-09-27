@@ -66,7 +66,7 @@ function handleLogout() {
   authStore.logout(false)
 }
 
-const baseURL = import.meta.env.VITE_API_BASE;
+const baseURL = import.meta.env.VITE_BASE_URL;
 const { scanInfo, updateScanInfo } = inject<ScanState>(scanState) as ScanState;
 const { artworkInfo, updateArtworkInfo } = inject<ArtworkState>(artworkState) as ArtworkState;
 
@@ -110,7 +110,7 @@ watch(() => scanInfo.value.is_scanning, (val) => {
   if(val) {
     if(evtSrc == null) {
       const token = TokenStorage.getAccessToken()
-      evtSrc = new EventSourcePolyfill(`${baseURL}api/admin/scan/progress`, {
+      evtSrc = new EventSourcePolyfill(`${baseURL}admin/scan/progress`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -148,7 +148,7 @@ watch(() => artworkInfo.value.is_generating, (val) => {
   if(val) {
     if(artworkEvtSrc == null) {
       const token = TokenStorage.getAccessToken()
-      artworkEvtSrc = new EventSourcePolyfill(`${baseURL}api/admin/artwork/progress`, {
+      artworkEvtSrc = new EventSourcePolyfill(`${baseURL}admin/artwork/progress`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
