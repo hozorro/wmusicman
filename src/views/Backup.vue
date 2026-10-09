@@ -119,8 +119,8 @@ async function handleImportFavData() {
             <div class=" text-ink-3">{{ user.id }}</div>
             <div class=" text-ink-2">{{ user.username }}</div>
             <div class=" text-ink-3">{{ user.is_admin ? 'admin' : 'user' }}</div>
-            <div class=" text-ink-3">{{ user.client_type }}</div>
-            <div class=" text-ink-3 truncate">{{ user.device_id }}</div>
+            <div class=" text-ink-3">{{ user.client_type || '-'  }}</div>
+            <div class=" text-ink-3 truncate">{{ user.device_id || '-' }}</div>
             <div class=" text-ink-3">{{ dayjs(user.last_login_at).format('YYYY-MM-DD HH:mm:ss') }}</div>
           </div>
         </div>

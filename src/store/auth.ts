@@ -14,7 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
   const _redirecting = ref(false)
 
   const isAuthenticated = computed(() => !!accessToken.value)
-  const appType = computed(() => import.meta.env.VITE_APP_TYPE)
+  const appType = computed(() => import.meta.env.VITE_CLIENT_TYPE)
 
   const userInfo = ref<UserInfo | null>(null)
 

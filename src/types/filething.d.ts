@@ -2,8 +2,8 @@ declare interface UserDetail {
   id: number,
   username: string,
   is_admin: boolean,
-  client_type: string,
-  device_id: string,
+  client_type?: string,
+  device_id?: string,
   last_login_at?: string
 }
 
