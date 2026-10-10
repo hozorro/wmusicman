@@ -246,21 +246,19 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4 animate-fade-in">
     <div class="page-head">
-      <div>
-        <h1>Transfer</h1>
-        <p>暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【此处可简单编辑文件元数据，批量修改元数据，请使用Picard】</b></p>
-      </div>
-      <div class="sp actions flex-wrap justify-end">
-        <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
-        <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
-        <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
-        <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy" @click="handleDeleteFiles">删除文件</button>
-        <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
-        <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
-        <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
-        <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
-        <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('FR')">转移至FR</button>
-      </div>
+      <h1>Transfer</h1>
+      <p>暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【批量修改元数据，请上传前使用Picard】</b></p>
+    </div>
+    <div class="sp actions flex-wrap">
+      <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
+      <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
+      <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
+      <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy" @click="handleDeleteFiles">删除文件</button>
+      <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
+      <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
+      <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
+      <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
+      <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('FR')">转移至FR</button>
     </div>
 
     <div class="flex items-center gap-2 text-[13px]">
