@@ -245,11 +245,11 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-4 animate-fade-in">
-    <div class="page-head">
-      <h1>Transfer</h1>
-      <p>暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【批量修改元数据，请上传前使用Picard】</b></p>
+    <div>
+      <h1 class="text-[20px] text-ink-1 font-bold">Transfer</h1>
+      <p class=" text-[13px] mt-[2px] text-ink-3">暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【批量修改元数据，请上传前使用Picard】</b></p>
     </div>
-    <div class="sp actions flex-wrap">
+    <div class=" mr-auto flex gap-2 flex-wrap">
       <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
       <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
       <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
