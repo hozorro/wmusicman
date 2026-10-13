@@ -273,6 +273,16 @@ export const setArtistArt = (artist_id: number, art_type: 'face' | 'portrait', f
 export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, value: string | number | string[]) => { 
   return generalAlova.Post<string>("/admin/edit/updatetrackfieldtag", {items, field, value});
 }
+// 修改曲目封面：上传图片文件，后端将其写入对应歌曲文件的 cover
+// formData 需包含: file (图片文件), track_id (曲目ID)
+export const updateTrackCover = (formData: FormData) => {
+  return generalAlova.Post('/admin/edit/updatetrackcover', formData, {
+    shareRequest: false,
+    transform: (res: number) => {
+      return baseURL + `artwork/track/${res}`
+    }
+  });
+}
 // #endregion
 
 // #region backup and restore
