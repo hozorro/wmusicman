@@ -252,7 +252,11 @@ export const uploadAlbumArt = (formData: FormData) => {
 export const getArtistArtCandidates = (artist_id: number, art_type: 'face' | 'portrait') => {
   return generalAlova.Get<{candidates: string[]}>(
     `/admin/edit/artistartcandidates/${artist_id}`, 
-    { params: { art_type }, shareRequest: false }
+    { 
+      params: { art_type }, 
+      shareRequest: false,
+      name: 'get-artist-art-candidates'
+    }
   );
 }
 // 上传候选图片到 artist 目录（自动编号）

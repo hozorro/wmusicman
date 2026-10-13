@@ -67,7 +67,7 @@ async function handleFileChange(event: Event) {
     upload.onUpload((progressEvent) => {
       uploadProgress.value = Math.round(progressEvent.loaded * 100 / progressEvent.total)
     })
-    await upload
+    await upload.send()
 
     // 上传成功后刷新候选列表
     invalidateCache(getArtistArtCandidates(props.artistId, props.artType))
