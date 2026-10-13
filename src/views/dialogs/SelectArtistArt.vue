@@ -3,6 +3,7 @@ import { ref, computed, onMounted, useTemplateRef, inject } from 'vue'
 import { useRequest } from 'alova/client'
 import { busyState, type BusyState } from '@/composables/busy'
 import { getArtistArtCandidates, uploadArtistArtCandidate } from '@/apis/methods/manage'
+import { invalidateCache } from 'alova'
 
 // While any global task is running, selection/upload entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -69,6 +70,7 @@ async function handleFileChange(event: Event) {
     await upload
 
     // 上传成功后刷新候选列表
+    invalidateCache(getArtistArtCandidates(props.artistId, props.artType))
     await refreshCandidates()
   } catch (err) {
     console.error('Upload candidate failed', err)

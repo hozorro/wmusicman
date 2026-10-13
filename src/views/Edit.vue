@@ -9,11 +9,12 @@ import WImgUploader from "@/components/WImgUploader.vue";
 import EditValue from "./dialogs/EditValue.vue";
 import EditMulti from "./dialogs/EditMulti.vue";
 import SelectArtistArt from './dialogs/SelectArtistArt.vue';
+import EditTrackCover from './dialogs/EditTrackCover.vue';
 import { openDialog } from "@/composables/wdialog";
 import { 
   transformArtwork, getArtistArtCandidates,
   getArtistChars, getArtists, getArtistsByPage, getArtist, getAlbum, 
-  uploadAlbumArt, updateTrackFieldTag, setArtistArt 
+  uploadAlbumArt, updateTrackFieldTag, setArtistArt, updateTrackCover 
 } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import dayjs from 'dayjs';
@@ -207,6 +208,32 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
     updateTrackFieldTag([id], prop, result)
   }
 }
+
+// 修改曲目封面
+async function handleEditTrackCover(track: TrackOfAlbum) {
+  if (busy.value) return
+  const result = await openDialog<{ trackId: number, file: File }>(EditTrackCover, {
+    title: '修改曲目封面',
+    contentProps: {
+      trackId: track.id,
+      trackTitle: track.title,
+      currentCover: track.cover,
+    }
+  })
+  if (result) {
+    const formData = new FormData()
+    formData.append('file', result.file)
+    formData.append('track_id', result.trackId.toString())
+    const newUrl = await updateTrackCover(formData)
+    // 更新本地显示（加时间戳防缓存）
+    const index = album.value.tracks.findIndex(item => item.id === result.trackId)
+    if (index !== -1) {
+      album.value.tracks[index].cover = newUrl + '?hashed=' + Date.now()
+    }
+    invalidateCache(getAlbum(album.value.id))
+    alert('修改封面成功')
+  }
+}
 </script>
 
 <template>
@@ -338,8 +365,13 @@ async function handleOpenCellEditDlg(id: number, prop: keyof TrackOfAlbum) {
             />
             <w-column width="6%" label="IMG">
               <template #default="scope">
-                <div class=" place-items-center" :title="'Path:'+ scope.row.path">
-                  <img :src="scope.row.cover" class="w-9 h-9 object-cover rounded-md" />
+                <div class="place-items-center cursor-pointer" :title="'Path:'+ scope.row.path" @click="handleEditTrackCover(scope.row as TrackOfAlbum)">
+                  <img v-if="scope.row.cover" :src="scope.row.cover" class="w-9 h-9 object-cover rounded-md" />
+                  <div v-else class="w-9 h-9 flex items-center justify-center bg-panel rounded-md border border-line text-ink-3">
+                    <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+                      <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"/>
+                    </svg>
+                  </div>
                 </div>
               </template>
             </w-column>

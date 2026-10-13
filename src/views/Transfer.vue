@@ -301,11 +301,10 @@ onMounted(() => {
             @open-cell-edit-dlg="handleOpenCellEditDlg"
             @sort-data="handleSortData"
           />
-          <WColumn width="8%" label="Album Artist" prop="albumartist" :column-editable="false" />
+          <WColumn width="8%" label="Album Artist" prop="albumartist" :transform="parseMulti" :column-editable="false" />
           <WColumn width="15%" label="Album" prop="album"
             :column-editable="true"
             cell-editable="direct"
-            :transform="parseMulti"
             @edit-column="handleEditColumn"
             @update-value="updateCellValue"
           />
