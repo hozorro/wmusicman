@@ -11,10 +11,11 @@ import EditMulti from "./dialogs/EditMulti.vue";
 import SelectArtistArt from './dialogs/SelectArtistArt.vue';
 import EditTrackCover from './dialogs/EditTrackCover.vue';
 import { openDialog } from "@/composables/wdialog";
-import { 
+import {
   transformArtwork, getArtistArtCandidates,
-  getArtistChars, getArtists, getArtistsByPage, getArtist, getAlbum, 
-  uploadAlbumArt, updateTrackFieldTag, setArtistArt, updateTrackCover 
+  getArtistChars, getArtists, getArtistsByPage, getArtist, getAlbum,
+  uploadAlbumArt, updateTrackFieldTag, setArtistArt, updateTrackCover,
+  getOrphanArtists, cleanupOrphanArtists
 } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import dayjs from 'dayjs';
@@ -22,8 +23,8 @@ import dayjs from 'dayjs';
 // While any global task is running, art selection entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
 
-// 歌手列表 tab 模式：'char' = 首字母导航，'latest' = 最新添加
-const artistTab = ref<'char' | 'latest'>('char');
+// 歌手列表 tab 模式：'char' = 首字母导航，'latest' = 最新添加，'orphan' = 清理孤立
+const artistTab = ref<'char' | 'latest' | 'orphan'>('char');
 
 const artistChar = ref("");
 const {data: artistChars, onSuccess} = useRequest(getArtistChars);
@@ -64,10 +65,40 @@ function loadMoreLatest() {
     latestPage.value++;
   }
 }
-function switchArtistTab(tab: 'char' | 'latest') {
+function switchArtistTab(tab: 'char' | 'latest' | 'orphan') {
   artistTab.value = tab;
   if (tab === 'latest' && latestArtists.value.length === 0) {
     reloadLatestArtists();
+  }
+  if (tab === 'orphan') {
+    loadOrphanArtists();
+  }
+}
+
+// 孤儿歌手
+const orphanCleaning = ref(false);
+
+const {data: orphanArtists, loading: orphanLoading, send: loadOrphanArtists} = useRequest(getOrphanArtists, {
+  initialData: [],
+  immediate: false
+});
+
+async function handleCleanupOrphan(id?: number) {
+  const ids = id ? [id] : orphanArtists.value.map(a => a.id);
+  if (ids.length === 0) return;
+  if (!confirm(id ? `确定清除歌手「${orphanArtists.value.find(a => a.id === id)?.name}」吗？` : `确定清除全部 ${ids.length} 个孤立歌手吗？`)) return;
+  orphanCleaning.value = true;
+  try {
+    const res = await cleanupOrphanArtists(ids);
+    if (res.failed_ids.length > 0) {
+      alert(`清除完成：成功 ${res.deleted_count} 个，失败 ${res.failed_ids.length} 个`);
+    } else {
+      alert(`成功清除 ${res.deleted_count} 个孤立歌手`);
+    }
+    invalidateCache([getOrphanArtists()])
+    await loadOrphanArtists();
+  } finally {
+    orphanCleaning.value = false;
   }
 }
 const {data: artist, send: getArtistInfo} = useRequest((id: number) => getArtist(id),{
@@ -246,6 +277,7 @@ async function handleEditTrackCover(track: TrackOfAlbum) {
           <div class="seg">
             <button :class="{ 'seg-on': artistTab === 'char' }" @click="switchArtistTab('char')">首字母</button>
             <button :class="{ 'seg-on': artistTab === 'latest' }" @click="switchArtistTab('latest')">最新添加</button>
+            <button :class="{ 'seg-on': artistTab === 'orphan' }" @click="switchArtistTab('orphan')">清理孤立</button>
           </div>
         </div>
       </div>
@@ -274,7 +306,7 @@ async function handleEditTrackCover(track: TrackOfAlbum) {
         </div>
       </template>
       <!-- 最新添加 Tab -->
-      <template v-else>
+      <template v-else-if="artistTab === 'latest'">
         <div class="card flex-1 min-h-0 flex flex-col">
           <div class="card-header"><h2>最新添加的歌手</h2></div>
           <div class="flex-1 overflow-y-auto p-2">
@@ -300,6 +332,39 @@ async function handleEditTrackCover(track: TrackOfAlbum) {
               <span v-else class="text-xs text-ink-3">已加载全部（或最多200条）</span>
             </div>
             <div v-if="latestArtists.length === 0 && !latestFetching" class="state-box text-xs">暂无数据</div>
+          </div>
+        </div>
+      </template>
+      <!-- 清理孤立 Tab -->
+      <template v-else-if="artistTab === 'orphan'">
+        <div class="card flex-1 min-h-0 flex flex-col">
+          <div class="card-header"><h2>孤立歌手清理</h2></div>
+          <div class="card-pad !py-3 flex-none border-b border-line">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-ink-2">共 {{ orphanArtists.length }} 个孤立歌手</span>
+              <button
+                class="btn btn-primary text-xs"
+                :disabled="orphanArtists.length === 0 || orphanCleaning"
+                @click="handleCleanupOrphan()"
+              >{{ orphanCleaning ? '清除中...' : '一键清除全部' }}</button>
+            </div>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2">
+            <div v-if="orphanLoading" class="state-box text-xs">加载中...</div>
+            <div v-else-if="orphanArtists.length === 0" class="state-box text-xs">暂无孤立歌手</div>
+            <div
+              v-else
+              v-for="ar in orphanArtists"
+              :key="ar.id"
+              class="flex items-center justify-between rounded-r px-3 py-1.5 text-[13px] text-ink-2 transition-colors hover:bg-accent-soft"
+            >
+              <span>{{ ar.name }}</span>
+              <button
+                class="btn btn-ghost text-xs text-danger"
+                :disabled="orphanCleaning"
+                @click="handleCleanupOrphan(ar.id)"
+              >清除</button>
+            </div>
           </div>
         </div>
       </template>

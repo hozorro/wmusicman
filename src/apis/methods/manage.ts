@@ -173,9 +173,9 @@ export const updateMetaTags = (session_id: string, items: FileInfoMeta[]) => {
 // export const updateFieldTag = (items: string[], field: keyof TrackFile, value: string) => { 
 //   return generalAlova.Post<ResponseData<string>>("/updatefieldtag", {items, field, value});
 // }
-export const transferFiles = (items: string[], lang: string, session_id: string, playlist: string) => { 
+export const transferFiles = (items: string[], lang: string, session_id: string, isUseOriginalName: boolean, playlist: string) => { 
   return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/archive?lang=${lang}`,
-    { items, playlist },
+    { items, playlist, is_use_original_name: isUseOriginalName },
     { name: "transfer-files", timeout: 1000 * 60 * 10 }
   );
 }
@@ -286,6 +286,16 @@ export const updateTrackCover = (formData: FormData) => {
       return baseURL + `artwork/track/${res}`
     }
   });
+}
+
+// 获取孤儿歌手列表
+export const getOrphanArtists = () => {
+  return generalAlova.Get<OrphanArtist[]>('/admin/edit/orphan/artists');
+}
+
+// 清理孤儿歌手
+export const cleanupOrphanArtists = (artist_ids: number[]) => {
+  return generalAlova.Post<OrphanCleanupResult>('/admin/edit/orphan/artists/cleanup', { artist_ids });
 }
 // #endregion
 
