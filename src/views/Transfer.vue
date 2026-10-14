@@ -223,9 +223,10 @@ async function handleTransfer(lang: 'CN' | 'FR') {
     }
     return acc
   }, [])
-  const result = await openDialog<string>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
+  const result = await openDialog<{ playlist: string; isUseOriginalName: boolean }>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
   if (result != null) {
-    const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, result)
+    const {playlist, isUseOriginalName} = result
+    const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, isUseOriginalName, playlist)
     invalidateCache(getSessionFiles(systemStore.curSession))
     if (count.count < sessionFiles.value.length) {
       await refreshSessionFiles()
@@ -250,8 +251,10 @@ onMounted(() => {
       <p class=" text-[13px] mt-[2px] text-ink-3">暂存区文件的元数据编辑、版本升级与存档转移。<b class="text-warn-ink">【批量修改元数据，请上传前使用Picard】</b></p>
     </div>
     <div class=" mr-auto flex gap-2 flex-wrap">
-      <button type="button" class="btn" :disabled="busy" @click="selectSession">选择会话</button>
-      <button type="button" class="btn btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
+      <div>
+        <button type="button" class="btn-default rounded-l-md border-[1px] border-line-strong" :disabled="busy" @click="selectSession">选择会话</button>
+        <button type="button" class="btn-default rounded-r-md border-[1px] border-line-strong btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
+      </div>
       <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
       <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy" @click="handleDeleteFiles">删除文件</button>
       <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>

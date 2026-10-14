@@ -11,9 +11,10 @@ const props = defineProps<{
 }>()
 const emits = defineEmits(['close', 'confirm', 'select'])
 const playlist = ref('')
+const isUseOriginalName = ref(false)
 
 function handleConfirm() {
-  emits('confirm', playlist.value.trim())
+  emits('confirm', { playlist: playlist.value.trim(), isUseOriginalName: isUseOriginalName.value })
 }
 </script>
 
@@ -21,6 +22,10 @@ function handleConfirm() {
   <div class="flex flex-col h-128 w-96 gap-3">
     <div class="flex-none text-[13.5px] text-ink-2">
       共 <b class="text-ink-1 num">{{ props.items.length }}</b> 首歌将被转移至 <span class="tag tag-info">{{ props.lang }}</span>
+    </div>
+    <div class=" flex-none text-[13px] text-ink-3 flex gap-2 items-center">
+      <input type="checkbox" id="isUseOriginalName" v-model="isUseOriginalName">
+      <label for="isUseOriginalName">使用原文件名(一般用于覆盖同名文件，会去除hash前缀)</label>
     </div>
     <div class="flex-1 min-h-0 overflow-y-auto rounded-r bg-panel border border-line px-3.5 py-2.5">
       <ul class="text-[13px] text-ink-2">

@@ -17,11 +17,22 @@ declare interface AlbumInfo extends Album {
 declare interface ArtistWithCreated extends Artist { 
   created_at: string,
 }
-declare interface ArtistInfo extends Artist { 
+declare interface ArtistInfo extends Artist {
   face_art_hash: string,
   portrait_art_hash: string,
   main_albums: Album[],
   track_albums: Album[],
+}
+declare interface OrphanArtist {
+  id: number,
+  name: string,
+  face_art_hash: string | null,
+  portrait_art_hash: string | null,
+}
+declare interface OrphanCleanupResult {
+  deleted_count: number,
+  deleted_artists: { id: number, name: string }[],
+  failed_ids: number[],
 }
 declare interface TrackOfAlbum {
   id: number,
