@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue';
 import { busyState, type BusyState } from '@/composables/busy'
-import { testPostBack, testGet } from '@/apis/methods/manage';
+import { testPostBack, testGet, exportAllArtists } from '@/apis/methods/manage';
 import { wAlert } from '@/composables/walert';
+import { getFilenameFromHeaders, saveBlob } from '@/utils/download';
 
 // While any global task is running, test request entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -18,6 +19,11 @@ const handlePost = async () => {
 const handleGet = async () => {
   // 删除后聚焦到前一个输入框（如果有的话）
   res.value = await testGet();
+};
+
+const handleExportArtists = async () => {
+  const res: any = await exportAllArtists();
+  saveBlob(res.data, getFilenameFromHeaders(res.headers, 'artists.json'))
 };
 </script>
 
@@ -44,6 +50,7 @@ const handleGet = async () => {
         <button type="button" class="btn btn-primary" :disabled="busy" @click="handlePost">Post</button>
         <button type="button" class="btn" :disabled="busy" @click="handleGet">Get</button>
         <button type="button" class="btn" @click="wAlert('This is a test alert', 'alert details')">Alert</button>
+        <button type="button" class="btn" @click="handleExportArtists">Export All Artists</button>
       </div>
 
       <!-- 响应预览 -->
