@@ -212,8 +212,8 @@ export const getArtist = (id: number) => {
     transform: (res: ArtistInfo) => {
       return {
         ...res,
-        face: res.face_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=face` : '',
-        portrait: res.portrait_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=portrait` : '',
+        face: res.face_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=face&h=${res.face_art_hash}` : '',
+        portrait: res.portrait_art_hash ? baseURL + `artwork/artist/${res.id}?img_cate=portrait&h=${res.portrait_art_hash}` : '',
       };
     }
   });
@@ -223,10 +223,10 @@ export const getAlbum = (id: number) => {
     transform: (res: AlbumInfo) => {
       return {
         ...res,
-        cover: res.cover_art_hash ? baseURL + `artwork/album/${res.id}` : '',
+        cover: res.cover_art_hash ? baseURL + `artwork/album/${res.id}?h=${res.cover_art_hash}` : '',
         tracks: res.tracks.map(item => ({
           ...item,
-          cover: item.cover_art_hash ? baseURL + `artwork/track/${item.id}` : '',
+          cover: item.cover_art_hash ? baseURL + `artwork/track/${item.id}?h=${item.cover_art_hash}` : '',
         })),
       };
     }
@@ -250,13 +250,19 @@ export const uploadAlbumArt = (formData: FormData) => {
 }
 // 获取 artist 候选图片列表
 export const getArtistArtCandidates = (artist_id: number, art_type: 'face' | 'portrait') => {
-  return generalAlova.Get<{candidates: string[]}>(
+  return generalAlova.Get<{artist_dir: string, candidates: string[]}>(
     `/admin/edit/artistartcandidates/${artist_id}`, 
     { 
       params: { art_type }, 
       shareRequest: false,
       name: 'get-artist-art-candidates'
     }
+  );
+}
+export const createArtistDir = (artist_name: string, lang: 'CN' | 'FR') => {
+  return generalAlova.Post<string>(
+    '/admin/edit/createartistdir', 
+    { artist_name, lang }
   );
 }
 // 上传候选图片到 artist 目录（自动编号）

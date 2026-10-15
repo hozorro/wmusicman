@@ -14,7 +14,7 @@ import { openDialog } from "@/composables/wdialog";
 import {
   transformArtwork, getArtistArtCandidates,
   getArtistChars, getArtists, getArtistsByPage, getArtist, getAlbum,
-  uploadAlbumArt, updateTrackFieldTag, setArtistArt, updateTrackCover,
+  uploadAlbumArt, updateTrackFieldTag, updateTrackCover,
   getOrphanArtists, cleanupOrphanArtists
 } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
@@ -159,15 +159,13 @@ async function handleSelectArt(artType: 'face' | 'portrait') {
     }
   })
   if (result) {
-    const res = await setArtistArt(artist.value.id, artType, result)
-    if (res === 'ok') {
+    if (result === 'ok') {
       if (artType === 'face') {
         faceSrc.value = transformArtwork('artist', artist.value.id, true, 'face')
       } else {
         portraitSrc.value = transformArtwork('artist', artist.value.id, true, 'portrait')
       }
       invalidateCache([getArtist(artist.value.id), getArtistArtCandidates(artist.value.id, artType)])
-      alert(`修改${artType}成功`)
     }
   }
 }

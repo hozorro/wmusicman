@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, useTemplateRef, inject } from 'vue'
 import { useRequest } from 'alova/client'
 import { busyState, type BusyState } from '@/composables/busy'
-import { getArtistArtCandidates, uploadArtistArtCandidate } from '@/apis/methods/manage'
+import { getArtistArtCandidates, uploadArtistArtCandidate, setArtistArt, createArtistDir } from '@/apis/methods/manage'
 import { invalidateCache } from 'alova'
 
 // While any global task is running, selection/upload entries are disabled
@@ -15,11 +15,12 @@ const props = defineProps<{
   currentUrl: string,
 }>()
 
-const emits = defineEmits(['select', 'confirm', 'close'])
+const emits = defineEmits(['confirm', 'close'])
 const selectedFile = ref<string>('')
 const isUploading = ref(false)
 const uploadProgress = ref(0)
 const fileInputRef = useTemplateRef('fileInput')
+const artist_dir = ref('')
 
 const baseURL = import.meta.env.VITE_BASE_URL
 
@@ -28,7 +29,9 @@ const { data, loading, error, send: refreshCandidates } = useRequest(
   { immediate: false }
 )
 
-onMounted(() => { refreshCandidates() })
+onMounted(() => { 
+  refreshCandidates().then(() => artist_dir.value = data.value?.artist_dir || '')
+})
 
 function getImgUrl(filename: string) {
   return baseURL + `artwork/candidates/${props.artistId}/${filename}?t=${Date.now()}`
@@ -38,9 +41,26 @@ function selectFile(filename: string) {
   selectedFile.value = selectedFile.value === filename ? '' : filename
 }
 
+const { data: setArtData, loading: settingArt, error: setArtError, send: setArt } = useRequest(
+  () => setArtistArt(props.artistId, props.artType, selectedFile.value),
+  { immediate: false }
+)
+
 function handleConfirm() {
   if (!selectedFile.value) return
-  emits('select', { close: true, payload: selectedFile.value })
+  setArt().then(() => {
+    emits('confirm', { close: true, payload: setArtData.value })
+  })
+}
+
+
+function createArtistDirectory(lang: 'CN' | 'FR') {
+  artist_dir.value = 'creating...'
+  createArtistDir(props.artistName, lang).then(
+    (res) => {
+      artist_dir.value = res
+    }
+  )
 }
 
 // 上传本地图片
@@ -89,6 +109,13 @@ async function handleFileChange(event: Event) {
     <div v-else-if="error" class="state-box !py-8"><b>加载失败</b><span class="!text-bad">{{ error.message }}</span></div>
     <div v-else>
       <!-- 候选图片网格 -->
+      <div class=" flex justify-between items-center">
+        <div class=" flex-1 text-sm text-ink-2">歌手文件夹：{{ data?.artist_dir ? data.artist_dir : '无' }}</div>
+        <div class=" flex-none">
+          <button type="button" v-if="!artist_dir" class="btn btn-primary" @click="createArtistDirectory('CN')">创建(CN)</button>
+          <button type="button" v-if="!artist_dir" class="btn btn-primary" @click="createArtistDirectory('FR')">创建(FR)</button>
+        </div>
+      </div> 
       <div class="grid grid-cols-4 gap-2.5 max-h-96 overflow-y-auto p-0.5">
         <div 
           v-for="filename in data?.candidates" 
@@ -138,14 +165,19 @@ async function handleFileChange(event: Event) {
     </div>
 
     <!-- 底部操作栏 -->
-    <div class="mt-4 pt-3 flex justify-end gap-2 border-t border-line">
-      <button type="button" class="btn" @click="emits('close')">取消</button>
-      <button 
-        type="button" 
-        class="btn btn-primary" 
-        :disabled="busy || !selectedFile" 
-        @click="handleConfirm"
-      >确认选择</button>
+    <div class="mt-4 pt-3 flex justify-between border-t border-line">
+      <div class=" text-sm">
+        <span v-if="setArtError" class=" text-bad-ink">{{ setArtError.message }}</span>
+      </div>
+      <div class="flex gap-2 flex-none">
+        <button type="button" class="btn" @click="emits('close')">取消</button>
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          :disabled="busy || !selectedFile" 
+          @click="handleConfirm"
+        >{{ settingArt ? '正在设置...' : '确认选择' }}</button>
+      </div>
     </div>
 
     <!-- 隐藏的文件输入 -->
