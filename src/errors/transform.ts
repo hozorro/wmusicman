@@ -22,6 +22,7 @@ const errors: Record<number, string> = {
   60113: "artist artwork file size exceeds limit",
   60115: "only jpg and png files are allowed",
   60116: "only jpg and png files are allowed",
+  60117: "failed to create artist directory",
   60204: "album artwork not found",
   60205: "cover art fetch error",
   60206: "cover art not found",

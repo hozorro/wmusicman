@@ -250,7 +250,7 @@ export const uploadAlbumArt = (formData: FormData) => {
 }
 // 获取 artist 候选图片列表
 export const getArtistArtCandidates = (artist_id: number, art_type: 'face' | 'portrait') => {
-  return generalAlova.Get<{artist_dir: string, candidates: string[]}>(
+  return generalAlova.Get<{artist_dir: string | null, candidates: string[]}>(
     `/admin/edit/artistartcandidates/${artist_id}`, 
     { 
       params: { art_type }, 
@@ -262,7 +262,8 @@ export const getArtistArtCandidates = (artist_id: number, art_type: 'face' | 'po
 export const createArtistDir = (artist_name: string, lang: 'CN' | 'FR') => {
   return generalAlova.Post<string>(
     '/admin/edit/createartistdir', 
-    { artist_name, lang }
+    { artist_name, lang },
+    { meta: { errorDisplay: 'page' }}
   );
 }
 // 上传候选图片到 artist 目录（自动编号）
@@ -445,5 +446,8 @@ export const testGet = () => {
   return generalAlova.Get("/admin/sysinfo/test", {
     transform: (res: string) => 'the server response from get is ' + res
   });
+}
+export const exportAllArtists = () => { 
+  return downloadAlova.Get("/admin/backup/exportartists", {responseType: 'blob'});
 }
 // #endregion
