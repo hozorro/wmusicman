@@ -432,6 +432,9 @@ export const setArtistArts = (option: {area: string, char_range: string, covers:
 export const getOutPlaylist = (plink: string) => { 
   return generalAlova.Post<OutPlaylist>("/getoutplaylist", {plink});
 }
+export const checkTrackFile = (list_text: string) => { 
+  return generalAlova.Post<CheckTrackFileResult>("/admin/upload/checktrackfiles",{list_text});
+}
 export const testPost = (value: string) => { 
   return generalAlova.Post("/admin/sysinfo/test", {text: value}, {
     transform: (res: string) => 'the server response from post is ' + res
