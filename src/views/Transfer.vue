@@ -260,7 +260,7 @@ onMounted(() => {
       <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
       <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
       <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
-      <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
+      <button type="button" class="btn text-white bg-emerald-600 border-emerald-600 hover:bg-emerald-700" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
       <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('FR')">转移至FR</button>
     </div>
 

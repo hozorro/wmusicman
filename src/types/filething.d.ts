@@ -138,3 +138,32 @@ declare interface MetaEditOutput {
 }
 
 declare type TransferItem = Pick<FileInfo, 'id' | 'title' | 'artists'>
+
+// ======== Check track file before upload ==========
+declare interface MusicFile {
+  file_name: string  // File name
+  stem: string       // File name without extension
+  artists: string[]
+  title: string
+}
+
+declare interface MatchedTrack {
+  file: MusicFile
+  db_track_id: number
+  db_title: string
+  db_path: string
+  db_artists: string[]
+  matched_artist: string
+}
+
+declare interface UnmatchedFile {
+  file: MusicFile
+  reason: string
+}
+
+declare interface CheckTrackFileResult {
+  total: number,
+  valid: number,
+  matched: MatchedTrack[]
+  unmatched: UnmatchedFile[]
+}
