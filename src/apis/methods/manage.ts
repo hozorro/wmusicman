@@ -281,6 +281,25 @@ export const setArtistArt = (artist_id: number, art_type: 'face' | 'portrait', f
     { artist_id, art_type, filename }
   );
 }
+// 抓取第三方歌手 face/portrait 临时图
+export const fetchArtistArt = (artist_name: string) => {
+  return generalAlova.Post<{
+    face_temp_id: string | null,
+    portrait_temp_id: string | null,
+    face_url: string | null,
+    portrait_url: string | null,
+  }>('/admin/edit/fetchartistart', { artist_name }, { shareRequest: false });
+}
+// 确认保存 face/portrait 临时图为正式图片（set_directly 为 true 时直接设为当前 artwork 并更新 hash）
+export const confirmArtistArt = (artist_id: number, art_type: 'face' | 'portrait', temp_id: string, set_directly: boolean = false) => {
+  return generalAlova.Post<{ filename: string }>(
+    '/admin/edit/confirmartistart',
+    { artist_id, art_type, temp_id, set_directly },
+    { shareRequest: false }
+  );
+}
+// 临时图 URL（与 transformArtwork 保持相同的 baseURL 拼接规则）
+export const transformTempArtistArt = (temp_id: string) => baseURL + `artwork/tmp/artist/${temp_id}`
 export const updateTrackFieldTag = (items: number[], field: keyof TrackOfAlbum, value: string | number | string[]) => { 
   return generalAlova.Post<string>("/admin/edit/updatetrackfieldtag", {items, field, value});
 }

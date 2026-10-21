@@ -9,6 +9,7 @@ import WImgUploader from "@/components/WImgUploader.vue";
 import EditValue from "./dialogs/EditValue.vue";
 import EditMulti from "./dialogs/EditMulti.vue";
 import SelectArtistArt from './dialogs/SelectArtistArt.vue';
+import FetchArtistArt from './dialogs/FetchArtistArt.vue';
 import EditTrackCover from './dialogs/EditTrackCover.vue';
 import { openDialog } from "@/composables/wdialog";
 import {
@@ -167,6 +168,31 @@ async function handleSelectArt(artType: 'face' | 'portrait') {
       }
       invalidateCache([getArtist(artist.value.id), getArtistArtCandidates(artist.value.id, artType)])
     }
+  }
+}
+
+// 抓取第三方歌手图片并设置为 face/portrait
+async function handleFetchArt() {
+  if (busy.value || !artist.value.id) return
+  const result = await openDialog<{ face: boolean, portrait: boolean }>(FetchArtistArt, {
+    title: `${artist.value.name} - 抓取歌手图片`,
+    contentProps: {
+      artistId: artist.value.id,
+      artistName: artist.value.name,
+    }
+  })
+  if (result) {
+    if (result.face) {
+      faceSrc.value = transformArtwork('artist', artist.value.id, true, 'face')
+    }
+    if (result.portrait) {
+      portraitSrc.value = transformArtwork('artist', artist.value.id, true, 'portrait')
+    }
+    invalidateCache([
+      getArtist(artist.value.id),
+      getArtistArtCandidates(artist.value.id, 'face'),
+      getArtistArtCandidates(artist.value.id, 'portrait')
+    ])
   }
 }
 
@@ -367,7 +393,10 @@ async function handleEditTrackCover(track: TrackOfAlbum) {
         </div>
       </template>
       <div class="card flex-none">
-        <div class="card-header"><h2>歌手图片</h2></div>
+        <div class="card-header flex justify-between items-center">
+          <h2>歌手图片</h2>
+          <button type="button" class="btn btn-sm" :disabled="busy || !artist.id" @click="handleFetchArt">抓取</button>
+        </div>
         <div class="card-pad flex gap-4" :class="{ 'opacity-60': busy }">
           <!-- Face: 点击弹出候选选择窗口 -->
           <div class="flex-none w-32 cursor-pointer" @click="handleSelectArt('face')">

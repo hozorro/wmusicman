@@ -121,7 +121,7 @@ async function handleFileChange(event: Event) {
           <button type="button" v-if="!artist_dir" class="btn btn-sm ml-2" @click="handleCreateArtistDir('FR')">创建(FR)</button>
         </div>
       </div> 
-      <div class="grid grid-cols-4 gap-2.5 max-h-96 overflow-y-auto p-0.5 mt-2">
+      <div class="grid grid-cols-4 gap-2.5 max-h-96 overflow-y-auto p-0.5 mt-2 border-dashed border-[1px] border-ink-3/50 rounded-md">
         <div 
           v-for="filename in data?.candidates" 
           :key="filename"
@@ -165,8 +165,8 @@ async function handleFileChange(event: Event) {
         暂无候选图片，请上传
       </div>
     </div>
-    <div class=" mt-4 p-2 bg-amber-200/30 rounded-md border border-amber-100 text-sm text-ink-3">
-      改变图片后需要在播放器中同步曲库以刷新图片hash，否则前端的图片缓存不会主动更新。
+    <div class="mt-4 p-2 bg-amber-200/10 rounded-md border border-amber-100/70 text-xs text-ink-3">
+      改变图片后需要在播放器中同步曲库以刷新图片hash，否则前端图片缓存不会主动更新。
     </div>
 
     <!-- 底部操作栏 -->
