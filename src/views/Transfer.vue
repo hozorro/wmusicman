@@ -15,6 +15,7 @@ import { createStageSession, getSessionFiles, addFilesToSession, transferFiles, 
 import { useTransfer } from "@/composables/transfer";
 import { busyState, type BusyState } from '@/composables/busy';
 import { invalidateCache } from "alova";
+import { toast } from "@/composables/toast.ts";
 
 // While a global task is running, all operations are disabled (read-only view)
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -84,7 +85,7 @@ const addFilesToCurSession = async () => {
     if (addedFiles.value && addedFiles.value.length) {
       sessionFiles.value.push(...addedFiles.value)
     } else {
-      alert('没有可添加的文件')
+      toast('没有可添加的文件', 'warning')
     }
   }
 }
@@ -117,13 +118,13 @@ async function handleUpdateVersion() {
   }
   const res = await updateVersion(systemStore.curSession, selected)
   if (res) {
-    alert('升级成功')
+    toast('升级成功', 'success')
     await refreshSessionFiles()
   }
 }
 async function handleModifyMeta() {
   if (rowSelected.value.length === 0) {
-    alert('请选择要修改的文件')
+    toast('请选择要修改的文件', 'warning')
     return
   }
   const meta = getUniformObject(rowSelected.value)
@@ -141,12 +142,12 @@ async function handleModifyMeta() {
 }
 async function handleSaveMeta() {
   if (rowSelected.value.length === 0) {
-    alert('请选择要保存的文件')
+    toast('请选择要保存的文件', 'warning')
     return
   }
   const res = await updateMetas(systemStore.curSession, rowSelected.value)
   if (res) {
-    alert('保存成功')
+    toast('保存成功', 'success')
   }
 }
 async function handleOpenCellEditDlg(id: string, prop: keyof MetaPrimary) {
@@ -161,7 +162,7 @@ function updateCellValue(payload: { key: string, field: keyof MetaPrimary, value
 }
 async function handleEditColumn(prop: keyof MetaPrimary) {
   if (rowSelected.value.length === 0) {
-    alert('请选择要修改的文件')
+    toast('请选择要修改的文件', 'warning')
     return
   }
   let result: string[] | string | number | null
@@ -210,7 +211,7 @@ async function handleMatch(id: string) {
 }
 async function handleTransfer(lang: 'CN' | 'FR') {
   if (rowSelected.value.length === 0) {
-    alert('请选择要转移的文件')
+    toast('请选择要转移的文件', 'warning')
     return
   }
   const items = fileList.value.reduce((acc: TransferItem[], cur) => {

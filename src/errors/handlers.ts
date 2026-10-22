@@ -2,6 +2,7 @@ import { useAuthStore } from "@/store/auth";
 import { transformApiError } from "./transform";
 import type { Method } from "alova";
 import type { ApiError } from "./apiError";
+import { toast } from "@/composables/toast";
 
 export function handleGlobalApiError(error: ApiError, method: Method) {
   if (error.handleByGlobal) return
@@ -36,5 +37,5 @@ export function handleGlobalApiError(error: ApiError, method: Method) {
 
   // 6. 普通操作错误默认 toast
   const message = transformApiError(error)
-  alert(message)
+  toast(message, 'error')
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { toast } from '@/composables/toast';
 import type { Method } from 'alova';
 import { ref, computed, useTemplateRef, watch, onBeforeUnmount } from 'vue';
 
@@ -41,6 +42,7 @@ const emit = defineEmits<{
   (e: 'change', payload: { file: File; url?: string; mode: 'auto' | 'manual' }): void;
   // 支持 v-model
   (e: 'update:modelValue', val: string): void;
+  (e: 'uploaded', value: string): void
 }>();
 
 // --- 状态管理 ---
@@ -135,10 +137,9 @@ const performAutoUpload = async (file: File) => {
     // 通知父组件更新 v-model
     emit('update:modelValue', newUrl);
     // 通知变更事件
-    emit('change', { file, url: newUrl, mode: 'auto' });
+    emit('uploaded', newUrl);
   } catch (error) {
-    console.error('Upload failed', error);
-    alert('上传失败，请重试');
+    toast('上传失败，请重试', 'error');
     // 失败回滚显示
     displayUrl.value = props.modelValue || null; 
     hasError.value = !props.modelValue;

@@ -6,6 +6,7 @@ import { getArtistArtCandidates, uploadArtistArtCandidate, setArtistArt, createA
 import { invalidateCache } from 'alova'
 import type { ApiError } from '@/errors/apiError'
 import { transformApiError } from '@/errors/transform'
+import { toast } from '@/composables/toast'
 
 // While any global task is running, selection/upload entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -95,7 +96,7 @@ async function handleFileChange(event: Event) {
     await refreshCandidates()
   } catch (err) {
     console.error('Upload candidate failed', err)
-    alert('上传失败，请重试')
+    toast('上传失败，请重试', 'error')
   } finally {
     isUploading.value = false
     uploadProgress.value = 0

@@ -4,6 +4,7 @@ import { useRequest } from 'alova/client';
 import { busyState, type BusyState } from '@/composables/busy'
 import { formatTimeDuration } from '@/utils/general'
 import { generateFingerprint, matchFingerprint } from '@/apis/methods/manage'
+import { toast } from '@/composables/toast';
 
 // While any global task is running, match operations are disabled (read-only)
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -114,7 +115,7 @@ async function handleConfirm() {
   if(useNewCoverArt.value) {
     const cachedCover = mcCache.value[acoustInfoList.value?.[selectedRow.value].release_id]
     if (!cachedCover) {
-      alert('Cover not loaded!')
+      toast('Cover not loaded!', 'warning')
       return
     }
   }

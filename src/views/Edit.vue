@@ -20,6 +20,8 @@ import {
 } from "@/apis/methods/manage";
 import { getUniformFieldValueSingle, getUniformFieldValueArray, compareArray } from "@/utils/general";
 import dayjs from 'dayjs';
+import { toast } from "@/composables/toast.ts";
+
 
 // While any global task is running, art selection entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -92,9 +94,9 @@ async function handleCleanupOrphan(id?: number) {
   try {
     const res = await cleanupOrphanArtists(ids);
     if (res.failed_ids.length > 0) {
-      alert(`清除完成：成功 ${res.deleted_count} 个，失败 ${res.failed_ids.length} 个`);
+      toast(`清除完成：成功 ${res.deleted_count} 个，失败 ${res.failed_ids.length} 个`, 'warning');
     } else {
-      alert(`成功清除 ${res.deleted_count} 个孤立歌手`);
+      toast(`成功清除 ${res.deleted_count} 个孤立歌手`, 'success');
     }
     invalidateCache([getOrphanArtists()])
     await loadOrphanArtists();
@@ -200,7 +202,8 @@ async function handleFetchArt() {
 const albumArtSrc = ref('')
 function handleAlbumArtUploaded(_:any) { 
   invalidateCache(getAlbum(album.value.id))
-  alert('修改album art成功.')
+  albumArtSrc.value = transformArtwork('album', album.value.id, true)
+  toast('修改album art成功.', 'success')
 }
 
 // handle track tag edit
@@ -225,13 +228,13 @@ function updateCellValue<K extends ('year'|'title')>(payload: {id: number, field
   updateTrackFieldTag([payload.id], payload.field, payload.value ).then((res) => {
     if (res == 'ok'){
       album.value.tracks.filter(item => item.id === payload.id)[0][payload.field] = payload.value
-      alert('修改成功')
+      toast('修改成功', 'success')
     }
   })
 }
 async function handleEditColumn(field: keyof TrackOfAlbum) {
   if (rowSelected.value.length === 0) {
-    alert('请选择要修改的文件')
+    toast('请选择要修改的文件', 'warning')
     return
   }
   let result: string[] | string | number | null
@@ -252,7 +255,7 @@ async function handleEditColumn(field: keyof TrackOfAlbum) {
       return false
     }).map(item => item.id)
     updateTrackFieldTag(changed, field, result)
-    alert('修改成功')
+    toast('修改成功', 'success')
   }
 }
 
@@ -286,7 +289,7 @@ async function handleEditTrackCover(track: TrackOfAlbum) {
       album.value.tracks[index].cover = newUrl + '?hashed=' + Date.now()
     }
     invalidateCache(getAlbum(album.value.id))
-    alert('修改封面成功')
+    toast('修改封面成功', 'success')
   }
 }
 </script>
