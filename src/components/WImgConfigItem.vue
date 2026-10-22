@@ -4,6 +4,7 @@ import { ref, computed, inject, watch } from 'vue';
 import WImgUploader from './WImgUploader.vue';
 import { assetImageCache } from '@/utils/general';
 import { busyState, type BusyState } from '@/composables/busy';
+import { toast } from '@/composables/toast.ts';
 
 interface Props {
   label: string;
@@ -83,7 +84,7 @@ const handleSetDefault = async () => {
     }
   } catch (error) {
     emit('error', error as Error);
-    alert('操作失败');
+    toast('操作失败', 'error');
   }
 };
 
@@ -119,7 +120,7 @@ const handleConfirm = async () => {
   } catch (error) {
     console.error(error);
     emit('error', error as Error);
-    alert('操作失败');
+    toast('操作失败', 'error');
 
     if (internalUrl.value?.startsWith('blob:')) {
       URL.revokeObjectURL(internalUrl.value);

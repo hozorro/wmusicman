@@ -8,6 +8,7 @@ import {
 } from '@/apis/methods/manage'
 import type { ApiError } from '@/errors/apiError'
 import { transformApiError } from '@/errors/transform'
+import { toast } from '@/composables/toast'
 
 // While any global task is running, fetch/confirm entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -92,7 +93,7 @@ async function handleConfirm() {
     confirmError.value = transformApiError(err as ApiError)
     // 部分成功时也提示用户哪些已保存
     if (saved.face || saved.portrait) {
-      alert(`部分保存成功：${saved.face ? 'face ' : ''}${saved.portrait ? 'portrait' : ''}`)
+      toast(`部分保存成功：${saved.face ? 'face ' : ''}${saved.portrait ? 'portrait' : ''}`, 'warning')
     }
   } finally {
     confirming.value = false

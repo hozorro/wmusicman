@@ -8,6 +8,8 @@ import { getScanInfo, getCurrentUser } from '@/apis/methods/manage';
 import { TokenStorage } from '@/utils/auth';
 import { useAuthStore } from '@/store/auth';
 import StatusBar from '@/components/StatusBar.vue';
+import ToastHost from '@/components/ToastHost.vue';
+
 
 // Sidebar menu grouped per design prototype: Overview / Music / Library / System
 interface MenuItem { label: string; to: string; icon: string; exact?: boolean }
@@ -276,6 +278,7 @@ const showNav = ref(true)
       >
         <router-view />
       </div>
+      <ToastHost />
       <StatusBar />
     </div>
   </div>

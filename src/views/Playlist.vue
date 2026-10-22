@@ -2,8 +2,8 @@
 import { ref, computed, inject } from 'vue'
 import { busyState, type BusyState } from '@/composables/busy'
 import { getTmpPlaylistJsons, getCurrentPlaylists, getAllPlaylists, backupPlaylist, createPlaylistFromJson, deleteJson } from '@/apis/methods/manage'
-import { wAlert } from '@/composables/walert'
 import { saveBlob, getFilenameFromHeaders } from '@/utils/download'
+import { toast } from '@/composables/toast'
 
 // While any global task is running, create/backup/delete entries are disabled
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -15,7 +15,7 @@ const listCate = ref<'json'|'playlist'|'hit'|'fav'>()
 function getJsonList(){
   getTmpPlaylistJsons().then((data) => {
     if(!data.length) {
-      wAlert('没有待创建的 Playlist')
+      toast('没有待创建的 Playlist', 'info')
       return
     }
     jsonLists.value = data  
@@ -49,12 +49,12 @@ async function bkPlaylist(id: number){
 }
 async function createPlaylist(filename: string){
   const res = await createPlaylistFromJson(filename)
-  alert(res)
+  toast(res)
 }
 function delJson(filename: string){
   deleteJson(filename).then((data) => {
     if(data){
-      alert(`${data} deleted!`)
+      toast(`${data} deleted!`, 'success' )
       getJsonList()
     }
   })

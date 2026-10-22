@@ -14,7 +14,7 @@ const toggleDetail = () => showDetail.value = !showDetail.value
 <template>
   <div class=" min-w-96">
     <div class=" flex justify-between items-center gap-3">
-      <div class=" flex-none p-2 text-ink-3">
+      <div class=" flex-none p-2 bg-ink-3/10 text-ink-3/50 rounded">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24">
           <path d="M0 0h24v24H0z" fill="none" />
           <g fill="none" stroke="currentColor" stroke-width="1.5">

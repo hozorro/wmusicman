@@ -7,6 +7,7 @@ import { TokenStorage } from "@/utils/auth";
 import type { AxiosError } from "axios";
 import { normalizeError } from "@/errors/normalizeError";
 import { handleGlobalApiError } from "@/errors/handlers";
+import { toast } from "@/composables/toast";
 
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<typeof VueHook, typeof axiosRequestAdapter>({
   assignToken: (method) => {
@@ -58,7 +59,7 @@ export const generalAlova = createAlova({
       const resData = await response.data
       console.log(resData)
       if (resData.code !==200) {
-        alert(`Data error[${resData.code}]: ${resData.msg}`)
+        toast(`Data error[${resData.code}]: ${resData.msg}`, 'error')
         return
       }
       return resData.data

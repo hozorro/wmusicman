@@ -244,7 +244,7 @@ export const uploadAlbumArt = (formData: FormData) => {
   return generalAlova.Post('/admin/edit/uploadalbumart', formData, {
     shareRequest: false,
     transform: (res: number) => {
-      return baseURL + `artwork/album/${res}`
+      return transformArtwork('album', res, true, 'cover')
     }
   });
 }
