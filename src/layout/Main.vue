@@ -26,6 +26,7 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
   { label: 'Library', items: [
     { label: 'Scanner', to: '/scan', icon: 'M229.66,218.34,184,172.7a92.1,92.1,0,1,0-11.31,11.31l45.63,45.64a8,8,0,0,0,11.32-11.32ZM40,116a76,76,0,1,1,76,76A76.08,76.08,0,0,1,40,116Z' },
     { label: 'Artwork', to: '/artwork', icon: 'M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM170.34,99.66a8,8,0,0,1,0,11.32l-32,32a8,8,0,0,1-11.31,0l-16-16a8,8,0,0,1,11.32-11.32L132,124.69l26.34-26.35A8,8,0,0,1,170.34,99.66ZM180,76a12,12,0,1,1-12-12A12,12,0,0,1,180,76Z' },
+    { label: 'Lyrics', to: '/lyric', icon: 'M210.3,56.34l-80-24A8,8,0,0,0,120,40V148.26A48,48,0,1,0,136,184V98.75l69.7,20.91A8,8,0,0,0,216,112V64A8,8,0,0,0,210.3,56.34ZM88,216a32,32,0,1,1,32-32A32,32,0,0,1,88,216ZM200,101.25l-64-19.2V50.75L200,69.95Z' },
     { label: 'Backup', to: '/backup', icon: 'M128,24A104,104,0,0,0,47.1,197.7a8,8,0,0,0,2.6,5.4,8,8,0,0,0,5.9,2.5H200.4a8,8,0,0,0,5.9-2.5,8,8,0,0,0,2.6-5.4A104,104,0,0,0,128,24ZM88,152a8,8,0,0,1,0-16h80a8,8,0,0,1,0,16Zm0-32a8,8,0,0,1,0-16h80a8,8,0,0,1,0,16Z' },
   ]},
   { label: 'System', items: [
@@ -46,6 +47,7 @@ const crumbMap: Array<{ prefix: string, group: string, title: string }> = [
   { prefix: '/playlist', group: 'Music', title: 'Playlist' },
   { prefix: '/scan', group: 'Library', title: 'Scanner' },
   { prefix: '/artwork', group: 'Library', title: 'Artwork' },
+  { prefix: '/lyric', group: 'Library', title: 'Lyrics' },
   { prefix: '/backup', group: 'Library', title: 'Backup' },
   { prefix: '/log', group: 'System', title: 'Log' },
   { prefix: '/settings', group: 'System', title: 'Settings' },
