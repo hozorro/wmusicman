@@ -13,6 +13,7 @@ export function normalizeError(raw: unknown, method?: any): ApiError {
     if (!raw.response) {
       return new ApiError({
         code: raw.code === 'ECONNABORTED' ? 50002 : 50001,
+        message: data?.msg ?? 'Network error or timeout',
         display: defaultDisplay,
       })
     }
@@ -21,6 +22,7 @@ export function normalizeError(raw: unknown, method?: any): ApiError {
     if (status === 401) {
       return new ApiError({
         code: data?.code ?? 20001,
+        message: data?.msg ?? 'Login expired',
         httpStatus: 401,
         detail: data?.detail,
         display: 'silent',
@@ -32,6 +34,7 @@ export function normalizeError(raw: unknown, method?: any): ApiError {
       return new ApiError({
         code: data?.code ?? 50003,
         httpStatus: 422,
+        message: data?.msg ?? 'Form validation failed',
         detail: data?.detail,
         fields: data?.detail?.fields,
         display: meta?.errorDisplay ?? 'form',
@@ -41,6 +44,7 @@ export function normalizeError(raw: unknown, method?: any): ApiError {
     // 其他业务 / HTTP 错误
     return new ApiError({
       code: data?.code ?? `HTTP_${status}`,
+      message: data?.msg ?? 'Unknown error',
       httpStatus: status,
       detail: data?.detail,
       display: defaultDisplay,

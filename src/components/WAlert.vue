@@ -13,7 +13,7 @@ const toggleDetail = () => showDetail.value = !showDetail.value
 
 <template>
   <div class=" min-w-96">
-    <div class=" flex justify-between items-center gap-3">
+    <div class=" flex justify-between gap-3">
       <div class=" flex-none p-2 bg-ink-3/10 text-ink-3/50 rounded">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24">
           <path d="M0 0h24v24H0z" fill="none" />
@@ -23,15 +23,14 @@ const toggleDetail = () => showDetail.value = !showDetail.value
             <path stroke-linecap="round" d="M18.5 18.5L22 22" />
           </g>
         </svg>
-
       </div>
       <div class=" flex-1 p-2">
         <div class=" text-sm text-ink-2">{{ props.message }}</div>
-        <div class=" mt-4 flex items-center justify-end gap-4">
-          <button v-if="detail !== ''" type="button" class="btn" @click="toggleDetail">{{ showDetail ? 'Hide' : 'Show' }} Detail</button>
-          <button type="button" class="btn btn-primary mr-4" @click="emits('close')">Close</button>
-        </div>
       </div>
+    </div>
+    <div class=" mt-4 flex items-center justify-end gap-4">
+      <button v-if="detail !== ''" type="button" class="btn" @click="toggleDetail">{{ showDetail ? 'Hide' : 'Show' }} Detail</button>
+      <button type="button" class="btn btn-primary mr-4" @click="emits('close')">Close</button>
     </div>
     <div v-if="showDetail" class=" min-h-64 mt-4 p-2 bg-panel text-xs text-gray-500 rounded-md border border-gray-300">
       {{ props.detail }}

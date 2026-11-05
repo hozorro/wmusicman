@@ -36,7 +36,7 @@ const handleConfirm = (payload: any) => {
 </script>
 
 <template>
-  <dialog ref="dlgRef" class=" border-0 rounded-md p-2 min-w-96 backdrop:bg-gray-500/50 top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%]">
+  <dialog ref="dlgRef" class=" border-0 rounded-md p-2 min-w-96 backdrop:bg-gray-500/50 top-1/4 left-1/2 translate-x-[-50%]">
     <div class=" flex justify-between items-center p-2 border-b border-b-gray-200">
       <h3 class=" text-base font-medium">{{title}}</h3>
       <button type="button" class="btn btn-ghost btn-icon btn-sm" title="Close" @click="handleClose">

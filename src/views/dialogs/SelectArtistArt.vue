@@ -5,7 +5,6 @@ import { busyState, type BusyState } from '@/composables/busy'
 import { getArtistArtCandidates, uploadArtistArtCandidate, setArtistArt, createArtistDir } from '@/apis/methods/manage'
 import { invalidateCache } from 'alova'
 import type { ApiError } from '@/errors/apiError'
-import { transformApiError } from '@/errors/transform'
 import { toast } from '@/composables/toast'
 
 // While any global task is running, selection/upload entries are disabled
@@ -114,7 +113,7 @@ async function handleFileChange(event: Event) {
       <div class=" flex justify-between items-center">
         <div class=" flex-1 text-sm text-ink-2">歌手文件夹：
           <span v-if="creating" class="text-xs text-ink-3 italic">创建中...</span>
-          <span v-else-if="createError" class="text-xs text-bad italic">{{ transformApiError(createError as ApiError) }}</span>
+          <span v-else-if="createError" class="text-xs text-bad italic">{{ `[${(createError as ApiError).code}] ${createError.message ?? '创建失败'}` }}</span>
           <span v-else>{{ artist_dir || '无' }}</span>
         </div>
         <div class=" flex-none">

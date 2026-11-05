@@ -1,4 +1,4 @@
-export type ErrorDisplay = 'toast' | 'page' | 'form' | 'silent'
+export type ErrorDisplay = 'toast' | 'page' | 'form' | 'silent' | 'report'
 
 export interface FieldErrorItem {
   type: string
@@ -12,6 +12,7 @@ export interface ApiMethodMeta {
 export class ApiError extends Error {
   code: number
   httpStatus?: number
+  message: string = ''
   detail?: any
   fields?: Record<string, FieldErrorItem[]>
   display: ErrorDisplay
@@ -20,6 +21,7 @@ export class ApiError extends Error {
   constructor(options: {
     code: number
     httpStatus?: number
+    message?: string
     detail?: any
     fields?: Record<string, FieldErrorItem[]>
     display: ErrorDisplay
@@ -27,6 +29,7 @@ export class ApiError extends Error {
     super(String(options.code))
     this.name = 'ApiError'
     this.code = options.code
+    this.message = options.message ?? ''
     this.httpStatus = options.httpStatus
     this.detail = options.detail
     this.fields = options.fields

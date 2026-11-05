@@ -7,7 +7,6 @@ import {
   fetchArtistArt, confirmArtistArt, transformTempArtistArt
 } from '@/apis/methods/manage'
 import type { ApiError } from '@/errors/apiError'
-import { transformApiError } from '@/errors/transform'
 import { toast } from '@/composables/toast'
 
 // While any global task is running, fetch/confirm entries are disabled
@@ -90,7 +89,8 @@ async function handleConfirm() {
     }
     emits('confirm', { close: true, payload: saved })
   } catch (err) {
-    confirmError.value = transformApiError(err as ApiError)
+    const error = err as ApiError
+    confirmError.value = `[${error.code}] ${error.message ?? '保存失败'}`
     // 部分成功时也提示用户哪些已保存
     if (saved.face || saved.portrait) {
       toast(`部分保存成功：${saved.face ? 'face ' : ''}${saved.portrait ? 'portrait' : ''}`, 'warning')
@@ -107,7 +107,7 @@ async function handleConfirm() {
     <div class="flex justify-between items-center">
       <div class="flex-1 text-sm text-ink-2">歌手文件夹：
         <span v-if="creating" class="text-xs text-ink-3 italic">创建中...</span>
-        <span v-else-if="createError" class="text-xs text-bad italic">{{ transformApiError(createError as ApiError) }}</span>
+        <span v-else-if="createError" class="text-xs text-bad italic">{{ `[${(createError as ApiError).code}] ${createError.message ?? '创建失败'}` }}</span>
         <span v-else>{{ artist_dir || '无' }}</span>
       </div>
       <div class="flex-none">
@@ -190,7 +190,7 @@ async function handleConfirm() {
     <!-- 底部操作栏 -->
     <div class="mt-4 pt-3 flex justify-between border-t border-line">
       <div class="text-sm">
-        <span v-if="fetchError" class="text-bad-ink">{{ transformApiError(fetchError as ApiError) }}</span>
+        <span v-if="fetchError" class="text-bad-ink">{{ `[${(fetchError as ApiError).code}] ${fetchError.message ?? '获取失败'}` }}</span>
         <span v-else-if="confirmError" class="text-bad-ink">{{ confirmError }}</span>
       </div>
       <div class="flex gap-2 flex-none">

@@ -465,9 +465,7 @@ export const testPostBack = () => {
   });
 }
 export const testGet = () => { 
-  return generalAlova.Get("/admin/sysinfo/test", {
-    transform: (res: string) => 'the server response from get is ' + res
-  });
+  return generalAlova.Get("/admin/testerr", {meta: {errorDisplay: 'report'}});
 }
 export const exportAllArtists = () => { 
   return downloadAlova.Get("/admin/backup/exportartists", {responseType: 'blob'});
