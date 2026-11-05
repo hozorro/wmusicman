@@ -11,9 +11,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "isolatedModules": true,
-    "baseUrl": "./",
     "paths": { 
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "types": []
   },

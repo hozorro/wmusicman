@@ -4,7 +4,7 @@ import { login as loginApi, logout as logoutApi, refreshToken as refreshApi, get
 import { TokenStorage } from '@/utils/auth'
 import router from '@/router'
 import type { ApiError } from '@/errors/apiError'
-import { transformApiError, transformFieldError } from '@/errors/transform'
+import { transformFieldError } from '@/errors/transform'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string>(TokenStorage.getAccessToken() || '')
@@ -36,7 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
       const error = rawError as ApiError
       if (error.code === 20001) {
         loginErrors.value = {
-          form: transformApiError(error)
+          form: `[${error.code}] ${error.message ?? '登录失败'}`
         }
       } else if (error.fields) {
         loginErrors.value = {
@@ -44,7 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       } else {
         loginErrors.value = {
-          form: transformApiError(error)
+          form: `[${error.code}] ${error.message ?? '登录失败'}`
         }
       }
       return false

@@ -18,7 +18,7 @@ const handlePost = async () => {
 
 const handleGet = async () => {
   // 删除后聚焦到前一个输入框（如果有的话）
-  res.value = await testGet();
+  await testGet();
 };
 
 const handleExportArtists = async () => {
