@@ -174,9 +174,12 @@ export const updateMetaTags = (session_id: string, items: FileInfoMeta[]) => {
 //   return generalAlova.Post<ResponseData<string>>("/updatefieldtag", {items, field, value});
 // }
 export const transferFiles = (items: string[], lang: string, session_id: string, isUseOriginalName: boolean, playlist: string) => { 
-  return generalAlova.Post<{count: number}>(`/admin/upload/staging/sessions/${session_id}/archive?lang=${lang}`,
+  return generalAlova.Post<ArchiveResult>(`/admin/upload/staging/sessions/${session_id}/archive?lang=${lang}`,
     { items, playlist, is_use_original_name: isUseOriginalName },
-    { name: "transfer-files", timeout: 1000 * 60 * 10 }
+    { 
+      name: "transfer-files", timeout: 1000 * 60 * 10,
+      meta: { errorDisplay: 'report' }
+    }
   );
 }
 export const deleteFilesFromSession = (session_id: string, items: string[]) => {

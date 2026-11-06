@@ -121,6 +121,18 @@ declare interface Fingerprint {
   fingerprint: string
 }
 
+declare interface ArchiveFileError {
+  file: string
+  error: string
+}
+
+declare interface ArchiveResult {
+  archived: boolean
+  archived_count: number
+  skipped: string[]
+  errors: ArchiveFileError[]
+}
+
 declare interface MetaEditInput {
   title: {uniformValue: string, isDifferent: boolean}
   artists: {uniformValue: string[], isDifferent: boolean}
