@@ -161,16 +161,15 @@ async function handleSelectArt(artType: 'face' | 'portrait') {
       currentUrl: artType === 'face' ? faceSrc.value : portraitSrc.value,
     }
   })
-  if (result) {
-    if (result === 'ok') {
-      if (artType === 'face') {
-        faceSrc.value = transformArtwork('artist', artist.value.id, true, 'face')
-      } else {
-        portraitSrc.value = transformArtwork('artist', artist.value.id, true, 'portrait')
-      }
-      invalidateCache([getArtist(artist.value.id), getArtistArtCandidates(artist.value.id, artType)])
-    }
+  // 弹窗确认后会返回非空结果（取消返回 null）；
+  // 不依赖后端返回的具体值，直接换取带时间戳的新地址，避免浏览器命中旧图缓存
+  if (!result) return
+  if (artType === 'face') {
+    faceSrc.value = transformArtwork('artist', artist.value.id, true, 'face')
+  } else {
+    portraitSrc.value = transformArtwork('artist', artist.value.id, true, 'portrait')
   }
+  invalidateCache([getArtist(artist.value.id), getArtistArtCandidates(artist.value.id, artType)])
 }
 
 // 抓取第三方歌手图片并设置为 face/portrait

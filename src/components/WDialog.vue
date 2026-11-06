@@ -31,7 +31,10 @@ const handleSelect = (value: {close: boolean, payload: any}) => {
 }
 const handleConfirm = (payload: any) => {
   dlgRef.value?.close()
-  emit('confirm', payload)
+  // 与 handleSelect 保持一致：内容组件可以用 {close, payload} 包装返回值
+  const isWrapped = payload !== null && typeof payload === 'object'
+    && 'close' in payload && 'payload' in payload
+  emit('confirm', isWrapped ? payload.payload : payload)
 }
 </script>
 

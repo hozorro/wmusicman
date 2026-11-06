@@ -14,8 +14,8 @@ import TransferOpt from "./dialogs/TransferOpt.vue";
 import { createStageSession, getSessionFiles, addFilesToSession, transferFiles, deleteFilesFromSession } from "@/apis/methods/manage";
 import { useTransfer } from "@/composables/transfer";
 import { busyState, type BusyState } from '@/composables/busy';
-import { invalidateCache } from "alova";
 import { toast } from "@/composables/toast.ts";
+import { wAlert } from "@/composables/walert.ts";
 
 // While a global task is running, all operations are disabled (read-only view)
 const busy = inject<BusyState | null>(busyState, null)?.busy ?? computed(() => false)
@@ -55,6 +55,9 @@ const refreshSessionFiles = async () => {
   if (!systemStore.curSession) return
   await loadSessionFiles(systemStore.curSession)
   sessionFiles.value = [...fetchedFiles.value]
+  // the selection only makes sense for the list it was made on: a stale id would otherwise be
+  // sent to /archive again and come back as "file not found"
+  rowSelected.value = []
 }
 const selectSession = async () => {
   const result = await openDialog<string>(Sessions, { title: '选择会话' })
@@ -67,6 +70,7 @@ const createSession = async () => {
   let res = await createStageSession()
   systemStore.curSession = res.session_id
   sessionFiles.value = []
+  rowSelected.value = []
 }
 const { data: addedFiles, loading, error, send: addFiles } = useRequest(
   () => addFilesToSession(systemStore.curSession), 
@@ -101,7 +105,7 @@ function handleAllSelection() {
   if (allSelected.value) {
     rowSelected.value = []
   } else {
-    rowSelected.value = sessionFiles.value.map(item => item.path)
+    rowSelected.value = sessionFiles.value.map(item => item.id)
   }
 }
 async function handleUpdateVersion() {
@@ -209,32 +213,51 @@ async function handleMatch(id: string) {
     if (result) setAcoustInfo(id, result)
   }
 }
+const transferring = ref(false)
 async function handleTransfer(lang: 'CN' | 'FR') {
-  if (rowSelected.value.length === 0) {
+  if (transferring.value) return
+  // resolve the selection against the current list: ids left over from a previous transfer or
+  // another session must never be sent again, or the backend reports them as unreadable files
+  const selected = fileList.value.filter(item => rowSelected.value.includes(item.id))
+  if (selected.length === 0) {
     toast('请选择要转移的文件', 'warning')
+    rowSelected.value = []
     return
   }
-  const items = fileList.value.reduce((acc: TransferItem[], cur) => {
-    if (rowSelected.value.includes(cur.id)) {
-      acc.push({
-        id: cur.id, 
-        title: cur.title || '', 
-        artists: cur.artists || [],
-      })
-    }
-    return acc
-  }, [])
+  const items = selected.map((cur): TransferItem => ({
+    id: cur.id,
+    title: cur.title || '',
+    artists: cur.artists || [],
+  }))
   const result = await openDialog<{ playlist: string; isUseOriginalName: boolean }>(TransferOpt, { title: '存档歌曲', contentProps: { lang, items } })
-  if (result != null) {
-    const {playlist, isUseOriginalName} = result
-    const count = await transferFiles(rowSelected.value, lang, systemStore.curSession, isUseOriginalName, playlist)
-    invalidateCache(getSessionFiles(systemStore.curSession))
-    if (count.count < sessionFiles.value.length) {
+  if (result == null || transferring.value) return
+
+  const {playlist, isUseOriginalName} = result
+  const sessionId = systemStore.curSession
+  transferring.value = true
+  try {
+    const res = await transferFiles(selected.map(item => item.id), lang, sessionId, isUseOriginalName, playlist)
+    const archivedCount = res.archived_count ?? 0
+    const skippedCount = res.skipped?.length ?? 0
+    const failedCount = res.errors?.length ?? 0
+    if (failedCount) {
+      wAlert(`已转移 ${archivedCount} 首，跳过${skippedCount}首，${failedCount} 首失败（仍在暂存区）`, JSON.stringify(res.errors))
+    } else if (archivedCount === 0 && skippedCount) {
+      toast('所选文件已不在暂存区，未做任何改动', 'info')
+    } else {
+      toast(`已转移 ${archivedCount} 首`, 'success')
+    }
+    rowSelected.value = []
+    // archived + skipped files are gone from staging: only ask the server for a list when
+    // something is left, otherwise the session may already have been removed (70302)
+    if (sessionFiles.value.length - archivedCount - skippedCount > 0) {
       await refreshSessionFiles()
     } else {
       sessionFiles.value = []
       systemStore.curSession = ''
     }
+  } finally {
+    transferring.value = false
   }
 }
 
@@ -253,16 +276,16 @@ onMounted(() => {
     </div>
     <div class=" mr-auto flex gap-2 flex-wrap">
       <div>
-        <button type="button" class="btn-default rounded-l-md border-[1px] border-line-strong" :disabled="busy" @click="selectSession">选择会话</button>
-        <button type="button" class="btn-default rounded-r-md border-[1px] border-line-strong btn-icon" title="新建会话" :disabled="busy" @click="createSession">+</button>
+        <button type="button" class="btn-default rounded-l-md border-[1px] border-line-strong" :disabled="busy || transferring" @click="selectSession">选择会话</button>
+        <button type="button" class="btn-default rounded-r-md border-[1px] border-line-strong btn-icon" title="新建会话" :disabled="busy || transferring" @click="createSession">+</button>
       </div>
-      <button type="button" class="btn" :disabled="loading || busy" @click="addFilesToCurSession">添加文件</button>
-      <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy" @click="handleDeleteFiles">删除文件</button>
-      <button type="button" class="btn btn-primary" :disabled="busy" @click="handleUpdateVersion">升级编码及meta版本</button>
-      <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy" @click="handleModifyMeta">修改meta</button>
-      <button type="button" class="btn" :disabled="!is_modified || loading || busy" @click="handleSaveMeta">保存meta</button>
-      <button type="button" class="btn text-white bg-emerald-600 border-emerald-600 hover:bg-emerald-700" :disabled="busy" @click="handleTransfer('CN')">转移至CN</button>
-      <button type="button" class="btn btn-danger" :disabled="busy" @click="handleTransfer('FR')">转移至FR</button>
+      <button type="button" class="btn" :disabled="loading || busy || transferring" @click="addFilesToCurSession">添加文件</button>
+      <button type="button" class="btn btn-danger" :disabled="!canDelete || deleting || busy || transferring" @click="handleDeleteFiles">删除文件</button>
+      <button type="button" class="btn btn-primary" :disabled="busy || transferring" @click="handleUpdateVersion">升级编码及meta版本</button>
+      <button type="button" class="btn" :disabled="rowSelected.length == 0 || busy || transferring" @click="handleModifyMeta">修改meta</button>
+      <button type="button" class="btn" :disabled="!is_modified || loading || busy || transferring" @click="handleSaveMeta">保存meta</button>
+      <button type="button" class="btn text-white bg-emerald-600 border-emerald-600 hover:bg-emerald-700" :disabled="busy || transferring" @click="handleTransfer('CN')">{{ transferring ? '转移中...' : '转移至CN' }}</button>
+      <button type="button" class="btn btn-danger" :disabled="busy || transferring" @click="handleTransfer('FR')">{{ transferring ? '转移中...' : '转移至FR' }}</button>
     </div>
 
     <div class="flex items-center gap-2 text-[13px]">
