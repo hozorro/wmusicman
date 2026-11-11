@@ -404,6 +404,14 @@ export const backupPlaylist = (id: number) => {
 export const deleteJson = (filename: string) => {
   return generalAlova.Delete<string>("/admin/backup/deleteplaylistjson",{filename});
 }
+// match parsed tracks against the music library, candidates carry track_id
+export const matchPlaylistTracks = (tracks: PlaylistImportTrack[]) => {
+  return generalAlova.Post<PlaylistMatchResponse>("/admin/backup/matchplaylisttracks", { tracks }, { shareRequest: false });
+}
+// create a playlist with the picked track ids only, no re-matching on the server
+export const createPlaylistFromMatch = (payload: PlaylistCreateFromMatchRequest) => {
+  return generalAlova.Post<PlaylistCreateFromMatchResponse>("/admin/backup/createplaylistfrommatch", payload, { shareRequest: false });
+}
 // #endregion
 
 // #region logs
